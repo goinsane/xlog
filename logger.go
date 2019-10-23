@@ -13,6 +13,7 @@ type Logger struct {
 	out         LogOutput
 	maxSeverity Severity
 	maxVerbose  Verbose
+	verbose     Verbose
 	tm          time.Time
 	fields      Fields
 }
@@ -34,6 +35,7 @@ func (l *Logger) clone() *Logger {
 		out:         l.out,
 		maxSeverity: l.maxSeverity,
 		maxVerbose:  l.maxVerbose,
+		verbose:     l.verbose,
 		tm:          l.tm,
 		fields:      make(Fields, len(l.fields)),
 	}
@@ -49,16 +51,20 @@ func (l *Logger) output(severity Severity, message string) {
 		return
 	}
 	l.mu.RLock()
-	if l.out != nil && l.maxSeverity >= severity {
+	if l.out != nil && l.maxSeverity >= severity && l.maxVerbose >= l.verbose {
 		messageLen := len(message)
 		buf := make([]byte, 0, messageLen+1)
 		buf = append(buf, message...)
 		if messageLen == 0 || message[messageLen-1] != '\n' {
 			buf = append(buf, '\n')
 		}
-		callers := make([]uintptr, 128)
+		tm := l.tm
+		if tm.IsZero() {
+			tm = time.Now()
+		}
+		callers := make([]uintptr, 32)
 		callers = callers[:runtime.Callers(4, callers)]
-		l.out.Log(buf, l.tm, l.fields, severity, runtime.CallersFrames(callers))
+		l.out.Log(buf, severity, l.verbose, tm, l.fields, runtime.CallersFrames(callers))
 	}
 	l.mu.RUnlock()
 }
@@ -138,14 +144,6 @@ func (l *Logger) Debugln(args ...interface{}) {
 	l.logln(SeverityDebug, args...)
 }
 
-func (l *Logger) V(verbose Verbose) *Logger {
-	ln := l.clone()
-	if verbose > ln.maxVerbose {
-		ln.out = nil
-	}
-	return ln
-}
-
 func (l *Logger) SetOutput(out LogOutput) {
 	l.mu.Lock()
 	l.out = out
@@ -165,4 +163,24 @@ func (l *Logger) SetMaxVerbose(maxVerbose Verbose) {
 	l.mu.Lock()
 	l.maxVerbose = maxVerbose
 	l.mu.Unlock()
+}
+
+func (l *Logger) V(verbose Verbose) *Logger {
+	ln := l.clone()
+	ln.verbose = verbose
+	return ln
+}
+
+func (l *Logger) WithTime(tm time.Time) *Logger {
+	ln := l.clone()
+	ln.tm = tm
+	return ln
+}
+
+func (l *Logger) WithFields(fields Fields) *Logger {
+	ln := l.clone()
+	for key, val := range ln.fields {
+		ln.fields[key] = val
+	}
+	return ln
 }
