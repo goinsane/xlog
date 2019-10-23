@@ -11,14 +11,15 @@ import (
 
 type LogOutput interface {
 	Log([]byte, Severity, Verbose, time.Time, Fields, *runtime.Frames)
-	Flush()
 }
 
 type TextLogOutput struct {
-	mu      sync.RWMutex
-	w       io.Writer
-	bw      *bufio.Writer
-	padding string
+	mu               sync.RWMutex
+	logMu            sync.Mutex
+	w                io.Writer
+	bw               *bufio.Writer
+	padding          []byte
+	reportStackTrace bool
 }
 
 func NewTextLogOutput(w io.Writer) *TextLogOutput {
@@ -28,39 +29,48 @@ func NewTextLogOutput(w io.Writer) *TextLogOutput {
 	}
 }
 
-func (lo *TextLogOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers *runtime.Frames) {
+func (lo *TextLogOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, frames *runtime.Frames) {
 	var err error
+	lo.logMu.Lock()
+	defer lo.logMu.Unlock()
 	lo.mu.RLock()
-	padding := []byte(lo.padding)
+	padding := lo.padding
+	reportStackTrace := lo.reportStackTrace
 	lo.mu.RUnlock()
 	for i := 0; len(msg) > 0; i++ {
 		if i > 0 && len(padding) > 0 {
 			_, err = lo.bw.Write(padding)
 			if err != nil {
-				break
+				return
 			}
 		}
 		idx := bytes.IndexByte(msg, '\n')
 		if idx < 0 {
-			idx = len(msg)
+			msg = append(msg, '\n')
+			idx = len(msg) + 1
 		} else {
 			idx++
 		}
 		_, err = lo.bw.Write(msg[:idx])
 		if err != nil {
-			break
+			return
 		}
 		msg = msg[idx:]
 	}
-	lo.bw.Flush()
-}
-
-func (lo *TextLogOutput) Flush() {
+	if reportStackTrace {
+		lo.bw.Write(FramesToStackTrace(frames, padding))
+	}
 	lo.bw.Flush()
 }
 
 func (lo *TextLogOutput) SetPadding(padding string) {
 	lo.mu.Lock()
-	lo.padding = padding
+	lo.padding = []byte(padding)
+	lo.mu.Unlock()
+}
+
+func (lo *TextLogOutput) SetReportStackTrace(reportStackTrace bool) {
+	lo.mu.Lock()
+	lo.reportStackTrace = reportStackTrace
 	lo.mu.Unlock()
 }
