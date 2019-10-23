@@ -9,35 +9,35 @@ import (
 )
 
 type Logger struct {
-	mu          sync.RWMutex
-	out         LogOutput
-	maxSeverity Severity
-	maxVerbose  Verbose
-	verbose     Verbose
-	tm          time.Time
-	fields      Fields
+	mu        sync.RWMutex
+	out       LogOutput
+	severity  Severity
+	verbose   Verbose
+	verbosity Verbose
+	tm        time.Time
+	fields    Fields
 }
 
-func New(out LogOutput, maxSeverity Severity, maxVerbose Verbose) *Logger {
-	if sv := int(maxSeverity); sv < 0 || sv >= len(severities) {
-		maxSeverity = SeverityInfo
+func New(out LogOutput, severity Severity, verbose Verbose) *Logger {
+	if !severity.IsValid() {
+		severity = SeverityInfo
 	}
 	return &Logger{
-		out:         out,
-		maxSeverity: maxSeverity,
-		maxVerbose:  maxVerbose,
+		out:      out,
+		severity: severity,
+		verbose:  verbose,
 	}
 }
 
 func (l *Logger) clone() *Logger {
 	l.mu.RLock()
 	ln := &Logger{
-		out:         l.out,
-		maxSeverity: l.maxSeverity,
-		maxVerbose:  l.maxVerbose,
-		verbose:     l.verbose,
-		tm:          l.tm,
-		fields:      make(Fields, len(l.fields)),
+		out:       l.out,
+		severity:  l.severity,
+		verbose:   l.verbose,
+		verbosity: l.verbosity,
+		tm:        l.tm,
+		fields:    make(Fields, len(l.fields)),
 	}
 	for key := range l.fields {
 		ln.fields[key] = l.fields[key]
@@ -51,7 +51,7 @@ func (l *Logger) output(severity Severity, message string) {
 		return
 	}
 	l.mu.RLock()
-	if l.out != nil && l.maxSeverity >= severity && l.maxVerbose >= l.verbose {
+	if l.out != nil && l.severity >= severity && l.verbose >= l.verbosity {
 		messageLen := len(message)
 		buf := make([]byte, 0, messageLen+1)
 		buf = append(buf, message...)
@@ -64,7 +64,7 @@ func (l *Logger) output(severity Severity, message string) {
 		}
 		callers := make([]uintptr, 32)
 		callers = callers[:runtime.Callers(4, callers)]
-		l.out.Log(buf, severity, l.verbose, tm, l.fields, runtime.CallersFrames(callers))
+		l.out.Log(buf, severity, l.verbosity, tm, l.fields, callers)
 	}
 	l.mu.RUnlock()
 }
@@ -150,24 +150,24 @@ func (l *Logger) SetOutput(out LogOutput) {
 	l.mu.Unlock()
 }
 
-func (l *Logger) SetMaxSeverity(maxSeverity Severity) {
+func (l *Logger) SetSeverity(severity Severity) {
 	l.mu.Lock()
-	if sv := int(maxSeverity); sv < 0 || sv >= len(severities) {
-		maxSeverity = SeverityInfo
+	if !severity.IsValid() {
+		severity = SeverityInfo
 	}
-	l.maxSeverity = maxSeverity
+	l.severity = severity
 	l.mu.Unlock()
 }
 
-func (l *Logger) SetMaxVerbose(maxVerbose Verbose) {
+func (l *Logger) SetVerbose(verbose Verbose) {
 	l.mu.Lock()
-	l.maxVerbose = maxVerbose
+	l.verbose = verbose
 	l.mu.Unlock()
 }
 
-func (l *Logger) V(verbose Verbose) *Logger {
+func (l *Logger) V(verbosity Verbose) *Logger {
 	ln := l.clone()
-	ln.verbose = verbose
+	ln.verbosity = verbosity
 	return ln
 }
 

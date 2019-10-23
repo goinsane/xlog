@@ -7,17 +7,20 @@ import (
 	"runtime"
 )
 
-type Verbose uint32
+type Verbose uint16
 
 type Fields map[string]interface{}
 
+type Callers []uintptr
+
 var (
 	defLogger    *Logger   = New(defLogOutput, SeverityInfo, 0)
-	defLogOutput LogOutput = NewTextLogOutput(os.Stdout)
+	defLogOutput LogOutput = NewTextLogOutput(os.Stdout, LogOutputFlagDefault)
 )
 
-func FramesToStackTrace(frames *runtime.Frames, padding []byte) []byte {
-	buf := bytes.NewBuffer(make([]byte, 0, 256))
+func CallersToStackTrace(callers Callers, padding []byte) []byte {
+	frames := runtime.CallersFrames(callers)
+	buf := bytes.NewBuffer(make([]byte, 0, 128))
 	for {
 		frame, more := frames.Next()
 		buf.Write(padding)

@@ -12,6 +12,11 @@ func (sv Severity) String() string {
 	return sSeverityUnknown
 }
 
+func (sv Severity) IsValid() bool {
+	k := int(sv)
+	return k >= 0 && k < len(severities)
+}
+
 const (
 	SeverityFatal = Severity(iota)
 	SeverityError
@@ -25,31 +30,31 @@ var severities = []Severity{SeverityFatal, SeverityError, SeverityWarning, Sever
 const SeverityUnknown = -1
 
 const (
-	sSeverityFatal   = "fatal"
-	sSeverityError   = "error"
-	sSeverityWarning = "warning"
-	sSeverityInfo    = "info"
-	sSeverityDebug   = "debug"
-	sSeverityUnknown = "unknown"
+	sSeverityFatal   = "FATAL"
+	sSeverityError   = "ERROR"
+	sSeverityWarning = "WARNING"
+	sSeverityInfo    = "INFO"
+	sSeverityDebug   = "DEBUG"
+	sSeverityUnknown = "UNKNOWN"
 )
 
 var sSeverities = []string{sSeverityFatal, sSeverityError, sSeverityWarning, sSeverityInfo, sSeverityDebug}
 
 func ParseSeverity(s string) Severity {
-	s = strings.ToLower(s)
+	s = strings.ToUpper(s)
 	if s == sSeverityFatal {
 		return SeverityFatal
 	}
-	if s == sSeverityError || s == "err" {
+	if s == sSeverityError || s == "ERR" {
 		return SeverityError
 	}
-	if s == sSeverityWarning || s == "warn" {
+	if s == sSeverityWarning || s == "WARN" {
 		return SeverityWarning
 	}
 	if s == sSeverityInfo {
 		return SeverityInfo
 	}
-	if s == sSeverityDebug || s == "dbg" {
+	if s == sSeverityDebug || s == "DBG" {
 		return SeverityDebug
 	}
 	return SeverityUnknown
