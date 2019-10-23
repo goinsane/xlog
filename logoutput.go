@@ -18,15 +18,16 @@ type LogOutput interface {
 type LogOutputFlag int
 
 const (
-	LogOutputFlagDate         = LogOutputFlag(1 << iota)              // the date in the local time zone: 2009/01/23
-	LogOutputFlagTime                                                 // the time in the local time zone: 01:23:23
-	LogOutputFlagMicroseconds                                         // microsecond resolution: 01:23:23.123123
-	LogOutputFlagUTC                                                  // use UTC rather than the local time zone
-	LogOutputFlagPadding                                              // use padding multiple lines
-	LogOutputFlagLongFile                                             // full file name and line number: /a/b/c/d.go:23
-	LogOutputFlagShortFile                                            // final file name element and line number: d.go:23
-	LogOutputFlagStackTrace                                           // print stack trace
-	LogOutputFlagDefault      = LogOutputFlagDate | LogOutputFlagTime // initial values for the default logger
+	LogOutputFlagDate         = LogOutputFlag(1 << iota)                                      // the date in the local time zone: 2009/01/23
+	LogOutputFlagTime                                                                         // the time in the local time zone: 01:23:23
+	LogOutputFlagMicroseconds                                                                 // microsecond resolution: 01:23:23.123123
+	LogOutputFlagUTC                                                                          // use UTC rather than the local time zone
+	LogOutputFlagSeverity                                                                     // severity level
+	LogOutputFlagPadding                                                                      // use padding multiple lines
+	LogOutputFlagLongFile                                                                     // full file name and line number: /a/b/c/d.go:23
+	LogOutputFlagShortFile                                                                    // final file name element and line number: d.go:23
+	LogOutputFlagStackTrace                                                                   // print stack trace
+	LogOutputFlagDefault      = LogOutputFlagDate | LogOutputFlagTime | LogOutputFlagSeverity // initial values for the default logger
 
 )
 
@@ -83,7 +84,9 @@ func (lo *TextLogOutput) Log(msg []byte, severity Severity, verbose Verbose, tm 
 			buf = append(buf, ' ')
 		}
 	}
-	buf = append(buf, fmt.Sprintf("%7s: ", severity.String())...)
+	if lo.flags&LogOutputFlagSeverity != 0 {
+		buf = append(buf, fmt.Sprintf("%7s: ", severity.String())...)
+	}
 	if lo.flags&LogOutputFlagPadding != 0 {
 		padLen = len(buf)
 	}
@@ -147,7 +150,7 @@ func (lo *TextLogOutput) Log(msg []byte, severity Severity, verbose Verbose, tm 
 		buf = buf[:0]
 		//buf = append(buf, "\tStack Trace: \n"...)
 		buf = append(buf, CallersToStackTrace(callers, []byte("\t"))...)
-		buf = append(buf, '\n')
+		//buf = append(buf, '\n')
 		_, err = lo.bw.Write(buf)
 		if err != nil {
 			return
