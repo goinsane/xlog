@@ -3,7 +3,6 @@ package xlog
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"runtime"
 	"strings"
@@ -100,7 +99,9 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 		}
 	}
 	if o.flags&OutputFlagSeverity != 0 {
-		buf = append(buf, fmt.Sprintf("%7s: ", severity.String())...)
+		buf = append(buf, severity.String()...)
+		buf = append(buf, ": "...)
+		//buf = append(buf, fmt.Sprintf("%7s: ", severity.String())...)
 	}
 	if o.flags&OutputFlagPadding != 0 {
 		padLen = len(buf)
@@ -182,7 +183,7 @@ func (o *TextOutput) SetFlags(flags OutputFlag) {
 	o.mu.Unlock()
 }
 
-// SetStackTraceSeverity sets severity level which allows printing stack trace.
+// SetStackTraceSeverity sets severity level which allows printing stack trace. By default, SeverityInfo.
 func (o *TextOutput) SetStackTraceSeverity(stackTraceSeverity Severity) {
 	o.mu.Lock()
 	if !stackTraceSeverity.IsValid() {

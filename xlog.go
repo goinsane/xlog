@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 )
 
 // Verbose is type of verbose level.
@@ -18,8 +19,8 @@ type Fields map[string]interface{}
 type Callers []uintptr
 
 var (
-	defLogger *Logger = New(defOutput, SeverityInfo, 0)
-	defOutput *TextOutput  = NewTextOutput(os.Stdout, OutputFlagDefault)
+	defLogger *Logger     = New(defOutput, SeverityInfo, 0)
+	defOutput *TextOutput = NewTextOutput(os.Stdout, OutputFlagDefault)
 )
 
 func itoa(buf *[]byte, i int, wid int) {
