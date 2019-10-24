@@ -11,26 +11,39 @@ import (
 	"time"
 )
 
+// Output is an interface for Logger output. All of Output implementations must be
+// concurrent-safe.
 type Output interface {
 	Log([]byte, Severity, Verbose, time.Time, Fields, Callers)
 }
 
+// OutputFlag is type of output flag.
 type OutputFlag int
 
 const (
-	OutputFlagDate         = OutputFlag(1 << iota)                                // the date in the local time zone: 2009/01/23
-	OutputFlagTime                                                                // the time in the local time zone: 01:23:23
-	OutputFlagMicroseconds                                                        // microsecond resolution: 01:23:23.123123
-	OutputFlagUTC                                                                 // use UTC rather than the local time zone
-	OutputFlagSeverity                                                            // severity level
-	OutputFlagPadding                                                             // use padding multiple lines
-	OutputFlagLongFile                                                            // full file name and line number: /a/b/c/d.go:23
-	OutputFlagShortFile                                                           // final file name element and line number: d.go:23
-	OutputFlagStackTrace                                                          // print stack trace
-	OutputFlagDefault      = OutputFlagDate | OutputFlagTime | OutputFlagSeverity // initial values for the default logger
-
+	// OutputFlagDate prints the date in the local time zone: 2009/01/23
+	OutputFlagDate = OutputFlag(1 << iota)
+	// OutputFlagTime prints the time in the local time zone: 01:23:23
+	OutputFlagTime
+	// OutputFlagMicroseconds prints microsecond resolution: 01:23:23.123123
+	OutputFlagMicroseconds
+	// OutputFlagUTC uses UTC rather than the local time zone
+	OutputFlagUTC
+	// OutputFlagSeverity prints severity level
+	OutputFlagSeverity
+	// OutputFlagPadding prints padding with multiple lines
+	OutputFlagPadding
+	// OutputFlagLongFile prints full file name and line number: /a/b/c/d.go:23
+	OutputFlagLongFile
+	// OutputFlagShortFile prints final file name element and line number: d.go:23
+	OutputFlagShortFile
+	// OutputFlagStackTrace prints stack trace
+	OutputFlagStackTrace
+	// OutputFlagDefault holds initial values for the default logger
+	OutputFlagDefault = OutputFlagDate | OutputFlagTime | OutputFlagSeverity
 )
 
+// TextOutput is an implementation of Output by writing texts to io.Writer w.
 type TextOutput struct {
 	mu                 sync.Mutex
 	w                  io.Writer
@@ -39,6 +52,7 @@ type TextOutput struct {
 	stackTraceSeverity Severity
 }
 
+// NewTextOutput creates a new TextOutput.
 func NewTextOutput(w io.Writer, flags OutputFlag) *TextOutput {
 	return &TextOutput{
 		w:                  w,
@@ -48,6 +62,7 @@ func NewTextOutput(w io.Writer, flags OutputFlag) *TextOutput {
 	}
 }
 
+// Log implementes Output.Log
 func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
 	var err error
 	o.mu.Lock()
@@ -160,12 +175,14 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 	o.bw.Flush()
 }
 
+// SetFlags sets flags.
 func (o *TextOutput) SetFlags(flags OutputFlag) {
 	o.mu.Lock()
 	o.flags = flags
 	o.mu.Unlock()
 }
 
+// SetStackTraceSeverity sets severity level which allows printing stack trace.
 func (o *TextOutput) SetStackTraceSeverity(stackTraceSeverity Severity) {
 	o.mu.Lock()
 	if !stackTraceSeverity.IsValid() {

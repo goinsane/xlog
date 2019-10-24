@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Logger provides a logger for leveled and structured logging.
 type Logger struct {
 	mu        sync.RWMutex
 	out       Output
@@ -18,6 +19,7 @@ type Logger struct {
 	fields    Fields
 }
 
+// New creates a new Logger.
 func New(out Output, severity Severity, verbose Verbose) *Logger {
 	if !severity.IsValid() {
 		severity = SeverityInfo
@@ -81,75 +83,92 @@ func (l *Logger) logln(severity Severity, args ...interface{}) {
 	l.output(severity, fmt.Sprintln(args...))
 }
 
+// Fatal logs to the FATAL severity logs, then calls os.Exit(1).
 func (l *Logger) Fatal(args ...interface{}) {
 	l.log(SeverityFatal, args...)
 	os.Exit(1)
 }
 
+// Fatalf logs to the FATAL severity logs, then calls os.Exit(1).
 func (l *Logger) Fatalf(format string, args ...interface{}) {
 	l.logf(SeverityFatal, format, args...)
 	os.Exit(1)
 }
 
+// Fatalln logs to the FATAL severity logs, then calls os.Exit(1).
 func (l *Logger) Fatalln(args ...interface{}) {
 	l.logln(SeverityFatal, args...)
 	os.Exit(1)
 }
 
+// Error logs to the ERROR severity logs.
 func (l *Logger) Error(args ...interface{}) {
 	l.log(SeverityError, args...)
 }
 
+// Errorf logs to the ERROR severity logs.
 func (l *Logger) Errorf(format string, args ...interface{}) {
 	l.logf(SeverityError, format, args...)
 }
 
+// Errorln logs to the ERROR severity logs.
 func (l *Logger) Errorln(args ...interface{}) {
 	l.logln(SeverityError, args...)
 }
 
+// Warning logs to the WARNING severity logs.
 func (l *Logger) Warning(args ...interface{}) {
 	l.log(SeverityWarning, args...)
 }
 
+// Warningf logs to the WARNING severity logs.
 func (l *Logger) Warningf(format string, args ...interface{}) {
 	l.logf(SeverityWarning, format, args...)
 }
 
+// Warningln logs to the WARNING severity logs.
 func (l *Logger) Warningln(args ...interface{}) {
 	l.logln(SeverityWarning, args...)
 }
 
+// Info logs to the INFO severity logs.
 func (l *Logger) Info(args ...interface{}) {
 	l.log(SeverityInfo, args...)
 }
 
+// Infof logs to the INFO severity logs.
 func (l *Logger) Infof(format string, args ...interface{}) {
 	l.logf(SeverityInfo, format, args...)
 }
 
+// Infoln logs to the INFO severity logs.
 func (l *Logger) Infoln(args ...interface{}) {
 	l.logln(SeverityInfo, args...)
 }
 
+// Debug logs to the DEBUG severity logs.
 func (l *Logger) Debug(args ...interface{}) {
 	l.log(SeverityDebug, args...)
 }
 
+// Debugf logs to the DEBUG severity logs.
 func (l *Logger) Debugf(format string, args ...interface{}) {
 	l.logf(SeverityDebug, format, args...)
 }
 
+// Debugln logs to the DEBUG severity logs.
 func (l *Logger) Debugln(args ...interface{}) {
 	l.logln(SeverityDebug, args...)
 }
 
+// SetOutput sets the Logger's output.
 func (l *Logger) SetOutput(out Output) {
 	l.mu.Lock()
 	l.out = out
 	l.mu.Unlock()
 }
 
+// SetSeverity sets the Logger's severity.
 func (l *Logger) SetSeverity(severity Severity) {
 	l.mu.Lock()
 	if !severity.IsValid() {
@@ -159,24 +178,28 @@ func (l *Logger) SetSeverity(severity Severity) {
 	l.mu.Unlock()
 }
 
+// SetVerbose sets the Logger's verbose.
 func (l *Logger) SetVerbose(verbose Verbose) {
 	l.mu.Lock()
 	l.verbose = verbose
 	l.mu.Unlock()
 }
 
+// V clones the Logger with given verbosity.
 func (l *Logger) V(verbosity Verbose) *Logger {
 	ln := l.clone()
 	ln.verbosity = verbosity
 	return ln
 }
 
+// WithTime clones the Logger with given time.
 func (l *Logger) WithTime(tm time.Time) *Logger {
 	ln := l.clone()
 	ln.tm = tm
 	return ln
 }
 
+// WithFields clones the Logger with given fields.
 func (l *Logger) WithFields(fields Fields) *Logger {
 	ln := l.clone()
 	for key, val := range ln.fields {
