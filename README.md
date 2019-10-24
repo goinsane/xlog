@@ -1,5 +1,7 @@
 # xlog
 
+[![GoDoc](https://godoc.org/github.com/goinsane/xlog?status.svg)](https://godoc.org/github.com/goinsane/xlog)
+
 Package xlog provides leveled and structured logging.
 
     xlog.SetSeverity(xlog.SeverityDebug)
