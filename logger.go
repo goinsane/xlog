@@ -10,7 +10,7 @@ import (
 
 type Logger struct {
 	mu        sync.RWMutex
-	out       LogOutput
+	out       Output
 	severity  Severity
 	verbose   Verbose
 	verbosity Verbose
@@ -18,7 +18,7 @@ type Logger struct {
 	fields    Fields
 }
 
-func New(out LogOutput, severity Severity, verbose Verbose) *Logger {
+func New(out Output, severity Severity, verbose Verbose) *Logger {
 	if !severity.IsValid() {
 		severity = SeverityInfo
 	}
@@ -144,7 +144,7 @@ func (l *Logger) Debugln(args ...interface{}) {
 	l.logln(SeverityDebug, args...)
 }
 
-func (l *Logger) SetOutput(out LogOutput) {
+func (l *Logger) SetOutput(out Output) {
 	l.mu.Lock()
 	l.out = out
 	l.mu.Unlock()

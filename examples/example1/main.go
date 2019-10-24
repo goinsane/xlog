@@ -16,8 +16,8 @@ func func2(l *xlog.Logger) {
 }
 
 func main() {
-	lo := xlog.NewTextLogOutput(os.Stdout, xlog.LogOutputFlagDefault|xlog.LogOutputFlagStackTrace|xlog.LogOutputFlagLongFile|xlog.LogOutputFlagPadding)
-	l := xlog.New(lo, xlog.SeverityInfo, 0)
+	o := xlog.NewTextOutput(os.Stdout, xlog.OutputFlagDefault|xlog.OutputFlagStackTrace|xlog.OutputFlagLongFile|xlog.OutputFlagPadding)
+	l := xlog.New(o, xlog.SeverityInfo, 0)
 	func1(l)
 	go func2(l)
 	time.Sleep(time.Second)

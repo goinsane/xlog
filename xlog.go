@@ -18,8 +18,8 @@ type Fields map[string]interface{}
 type Callers []uintptr
 
 var (
-	defLogger    *Logger   = New(defLogOutput, SeverityInfo, 0)
-	defLogOutput LogOutput = NewTextLogOutput(os.Stdout, LogOutputFlagDefault)
+	defLogger *Logger = New(defOutput, SeverityInfo, 0)
+	defOutput Output  = NewTextOutput(os.Stdout, OutputFlagDefault)
 )
 
 // CallersToStackTrace generates stack trace output from stack callers.
