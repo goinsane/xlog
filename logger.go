@@ -15,6 +15,7 @@ type Logger struct {
 	severity           Severity
 	verbose            Verbose
 	verbosity          Verbose
+	printSeverity      Severity
 	stackTraceSeverity Severity
 	tm                 time.Time
 	fields             Fields
@@ -29,6 +30,8 @@ func New(out Output, severity Severity, verbose Verbose) *Logger {
 		out:                out,
 		severity:           severity,
 		verbose:            verbose,
+		verbosity:          0,
+		printSeverity:      SeverityInfo,
 		stackTraceSeverity: SeverityNone,
 	}
 }
@@ -40,6 +43,7 @@ func (l *Logger) clone() *Logger {
 		severity:           l.severity,
 		verbose:            l.verbose,
 		verbosity:          l.verbosity,
+		printSeverity:      l.printSeverity,
 		stackTraceSeverity: l.stackTraceSeverity,
 		tm:                 l.tm,
 		fields:             make(Fields, len(l.fields)),
@@ -167,6 +171,21 @@ func (l *Logger) Debugln(args ...interface{}) {
 	l.logln(SeverityDebug, args...)
 }
 
+// Print logs to logs has Logger's print severity.
+func (l *Logger) Print(args ...interface{}) {
+	l.log(l.printSeverity, args...)
+}
+
+// Printf logs to logs has Logger's print severity.
+func (l *Logger) Printf(format string, args ...interface{}) {
+	l.logf(l.printSeverity, format, args...)
+}
+
+// Println logs to logs has Logger's print severity.
+func (l *Logger) Println(args ...interface{}) {
+	l.logln(l.printSeverity, args...)
+}
+
 // SetOutput sets the Logger's output.
 func (l *Logger) SetOutput(out Output) {
 	l.mu.Lock()
@@ -196,6 +215,17 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	ln := l.clone()
 	ln.verbosity = verbosity
 	return ln
+}
+
+// SetPrintSeverity sets the Logger's Print functions severity. If printSeverity is invalid, it sets SeverityInfo.
+// By default, SeverityInfo.
+func (l *Logger) SetPrintSeverity(printSeverity Severity) {
+	l.mu.Lock()
+	if !printSeverity.IsValid() {
+		printSeverity = SeverityInfo
+	}
+	l.printSeverity = printSeverity
+	l.mu.Unlock()
 }
 
 // SetStackTraceSeverity sets the Logger's stack trace severity. If stackTraceSeverity is invalid, it sets SeverityNone.

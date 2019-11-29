@@ -132,6 +132,21 @@ func Debugln(args ...interface{}) {
 	defLogger.logln(SeverityDebug, args...)
 }
 
+// Print logs to the default logger.
+func Print(args ...interface{}) {
+	defLogger.log(defLogger.printSeverity, args...)
+}
+
+// Printf logs to the default logger.
+func Printf(format string, args ...interface{}) {
+	defLogger.logf(defLogger.printSeverity, format, args...)
+}
+
+// Println logs to the default logger.
+func Println(args ...interface{}) {
+	defLogger.logln(defLogger.printSeverity, args...)
+}
+
 // SetOutput sets the default logger's output. By default, the default output.
 func SetOutput(out Output) {
 	defLogger.SetOutput(out)
@@ -151,6 +166,12 @@ func SetVerbose(verbose Verbose) {
 // V clones the default logger with given verbosity.
 func V(verbosity Verbose) *Logger {
 	return defLogger.V(verbosity)
+}
+
+// SetPrintSeverity sets the default logger's Print functions severity. If printSeverity is invalid, it sets SeverityInfo.
+// By default, SeverityInfo.
+func SetPrintSeverity(printSeverity Severity) {
+	defLogger.SetPrintSeverity(printSeverity)
 }
 
 // SetStackTraceSeverity sets the default logger's stack trace severity. If stackTraceSeverity is invalid, it sets SeverityNone.
