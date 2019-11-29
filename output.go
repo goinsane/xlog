@@ -24,22 +24,36 @@ type OutputFlag int
 const (
 	// OutputFlagDate prints the date in the local time zone: 2009/01/23
 	OutputFlagDate = OutputFlag(1 << iota)
+
 	// OutputFlagTime prints the time in the local time zone: 01:23:23
 	OutputFlagTime
+
 	// OutputFlagMicroseconds prints microsecond resolution: 01:23:23.123123
 	OutputFlagMicroseconds
+
 	// OutputFlagUTC uses UTC rather than the local time zone
 	OutputFlagUTC
+
 	// OutputFlagSeverity prints severity level
 	OutputFlagSeverity
+
 	// OutputFlagPadding prints padding with multiple lines
 	OutputFlagPadding
+
+	// OutputFlagFields prints fields
+	OutputFlagFields
+
 	// OutputFlagLongFile prints full file name and line number: /a/b/c/d.go:23
 	OutputFlagLongFile
+
 	// OutputFlagShortFile prints final file name element and line number: d.go:23
 	OutputFlagShortFile
+
+	// OutputFlagStackTrace prints stack trace
+	OutputFlagStackTrace
+
 	// OutputFlagDefault holds initial values for the default logger
-	OutputFlagDefault = OutputFlagDate | OutputFlagTime | OutputFlagSeverity
+	OutputFlagDefault = OutputFlagDate | OutputFlagTime | OutputFlagSeverity | OutputFlagFields | OutputFlagStackTrace
 )
 
 // TextOutput is an implementation of Output by writing texts to io.Writer w.
@@ -133,20 +147,16 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 		msg = msg[idx:]
 	}
 
-	if len(fields) > 0 {
+	if len(fields) > 0 && o.flags&OutputFlagFields != 0 {
 		fields2 := fields.Clone()
 		sort.Sort(fields2)
-		_, err = o.bw.WriteString("\tFields: ")
-		if err != nil {
-			return
-		}
+		buf = buf[:0]
+		buf = append(buf, "\tFields: "...)
 		for _, f := range fields2 {
-			_, err = fmt.Fprintf(o.bw, "%s=%q ", f.Key, fmt.Sprintf("%v", f.Val))
-			if err != nil {
-				return
-			}
+			buf = append(buf, fmt.Sprintf("%s=%q ", f.Key, fmt.Sprintf("%v", f.Val))...)
 		}
-		_, err = o.bw.WriteString("\n")
+		buf = append(buf, '\n')
+		_, err = o.bw.Write(buf)
 		if err != nil {
 			return
 		}
@@ -180,11 +190,13 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 				return
 			}
 		}
-		buf = buf[:0]
-		buf = append(buf, CallersToStackTrace(callers, []byte("\t"))...)
-		_, err = o.bw.Write(buf)
-		if err != nil {
-			return
+		if o.flags&OutputFlagStackTrace != 0 {
+			buf = buf[:0]
+			buf = append(buf, CallersToStackTrace(callers, []byte("\t"))...)
+			_, err = o.bw.Write(buf)
+			if err != nil {
+				return
+			}
 		}
 	}
 }
