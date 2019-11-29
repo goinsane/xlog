@@ -20,7 +20,7 @@ type Logger struct {
 	fields             Fields
 }
 
-// New creates a new Logger.
+// New creates a new Logger. If severity is invalid, it sets SeverityInfo.
 func New(out Output, severity Severity, verbose Verbose) *Logger {
 	if !severity.IsValid() {
 		severity = SeverityInfo
@@ -174,7 +174,7 @@ func (l *Logger) SetOutput(out Output) {
 	l.mu.Unlock()
 }
 
-// SetSeverity sets the Logger's severity.
+// SetSeverity sets the Logger's severity. If severity is invalid, it sets SeverityInfo.
 func (l *Logger) SetSeverity(severity Severity) {
 	l.mu.Lock()
 	if !severity.IsValid() {
@@ -198,7 +198,8 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	return ln
 }
 
-// SetStackTraceSeverity sets the Logger's stack trace severity. By default, SeverityNone.
+// SetStackTraceSeverity sets the Logger's stack trace severity. If stackTraceSeverity is invalid, it sets SeverityNone.
+// By default, SeverityNone.
 func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) {
 	l.mu.Lock()
 	if !stackTraceSeverity.IsValid() {

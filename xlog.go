@@ -137,7 +137,8 @@ func SetOutput(out Output) {
 	defLogger.SetOutput(out)
 }
 
-// SetSeverity sets the default logger's severity. By default, SeverityInfo.
+// SetSeverity sets the default logger's severity. If severity is invalid, it sets SeverityInfo.
+// By default, SeverityInfo.
 func SetSeverity(severity Severity) {
 	defLogger.SetSeverity(severity)
 }
@@ -152,7 +153,8 @@ func V(verbosity Verbose) *Logger {
 	return defLogger.V(verbosity)
 }
 
-// SetStackTraceSeverity sets the default logger's stack trace severity. By default, SeverityNone.
+// SetStackTraceSeverity sets the default logger's stack trace severity. If stackTraceSeverity is invalid, it sets SeverityNone.
+// By default, SeverityNone.
 func SetStackTraceSeverity(stackTraceSeverity Severity) {
 	defLogger.SetStackTraceSeverity(stackTraceSeverity)
 }
