@@ -38,10 +38,9 @@ func ExampleLogger() {
 }
 
 func ExampleTextOutput() {
-	output := xlog.NewTextOutput(os.Stdout, xlog.OutputFlagSeverity|xlog.OutputFlagStackTrace)
+	output := xlog.NewTextOutput(os.Stdout, xlog.OutputFlagDefault | xlog.OutputFlagLongFile | xlog.OutputFlagPadding)
 	logger := xlog.New(output, xlog.SeverityInfo, 2)
-
-	output.SetStackTraceSeverity(xlog.SeverityWarning)
+	logger.SetStackTraceSeverity(xlog.SeverityWarning)
 
 	logger.Info("this is info log, verbosity 0")
 	logger.V(0).Warning("this is warning log, verbosity 0")

@@ -36,28 +36,24 @@ const (
 	OutputFlagLongFile
 	// OutputFlagShortFile prints final file name element and line number: d.go:23
 	OutputFlagShortFile
-	// OutputFlagStackTrace prints stack trace
-	OutputFlagStackTrace
 	// OutputFlagDefault holds initial values for the default logger
 	OutputFlagDefault = OutputFlagDate | OutputFlagTime | OutputFlagSeverity
 )
 
 // TextOutput is an implementation of Output by writing texts to io.Writer w.
 type TextOutput struct {
-	mu                 sync.Mutex
-	w                  io.Writer
-	bw                 *bufio.Writer
-	flags              OutputFlag
-	stackTraceSeverity Severity
+	mu    sync.Mutex
+	w     io.Writer
+	bw    *bufio.Writer
+	flags OutputFlag
 }
 
 // NewTextOutput creates a new TextOutput.
 func NewTextOutput(w io.Writer, flags OutputFlag) *TextOutput {
 	return &TextOutput{
-		w:                  w,
-		bw:                 bufio.NewWriter(w),
-		flags:              flags,
-		stackTraceSeverity: SeverityInfo,
+		w:     w,
+		bw:    bufio.NewWriter(w),
+		flags: flags,
 	}
 }
 
@@ -101,7 +97,6 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 	if o.flags&OutputFlagSeverity != 0 {
 		buf = append(buf, severity.String()...)
 		buf = append(buf, ": "...)
-		//buf = append(buf, fmt.Sprintf("%7s: ", severity.String())...)
 	}
 	if o.flags&OutputFlagPadding != 0 {
 		padLen = len(buf)
@@ -134,39 +129,36 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 		msg = msg[idx:]
 	}
 
-	if o.flags&(OutputFlagLongFile|OutputFlagShortFile) != 0 {
-		buf = buf[:0]
-		buf = append(buf, "\tFile: "...)
-		file, line := "???", 0
-		if len(callers) > 0 {
+	if len(callers) > 0 {
+		if o.flags&(OutputFlagLongFile|OutputFlagShortFile) != 0 {
+			buf = buf[:0]
+			buf = append(buf, "\tFile: "...)
+			file, line := "???", 0
 			f := runtime.FuncForPC(callers[0])
-			file, line = f.FileLine(callers[0])
-		}
-		if o.flags&OutputFlagShortFile != 0 {
-			short := file
-			for i := len(file) - 1; i > 0; i-- {
-				if file[i] == '/' {
-					short = file[i+1:]
-					break
-				}
+			if f != nil {
+				file, line = f.FileLine(callers[0])
 			}
-			file = short
+			if o.flags&OutputFlagShortFile != 0 {
+				short := file
+				for i := len(file) - 1; i > 0; i-- {
+					if file[i] == '/' {
+						short = file[i+1:]
+						break
+					}
+				}
+				file = short
+			}
+			buf = append(buf, file...)
+			buf = append(buf, ':')
+			itoa(&buf, line, -1)
+			buf = append(buf, '\n')
+			_, err = o.bw.Write(buf)
+			if err != nil {
+				return
+			}
 		}
-		buf = append(buf, file...)
-		buf = append(buf, ':')
-		itoa(&buf, line, -1)
-		buf = append(buf, '\n')
-		_, err = o.bw.Write(buf)
-		if err != nil {
-			return
-		}
-	}
-
-	if o.flags&OutputFlagStackTrace != 0 && severity <= o.stackTraceSeverity {
 		buf = buf[:0]
-		//buf = append(buf, "\tStack Trace: \n"...)
 		buf = append(buf, CallersToStackTrace(callers, []byte("\t"))...)
-		//buf = append(buf, '\n')
 		_, err = o.bw.Write(buf)
 		if err != nil {
 			return
@@ -180,15 +172,5 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 func (o *TextOutput) SetFlags(flags OutputFlag) {
 	o.mu.Lock()
 	o.flags = flags
-	o.mu.Unlock()
-}
-
-// SetStackTraceSeverity sets severity level which allows printing stack trace. By default, SeverityInfo.
-func (o *TextOutput) SetStackTraceSeverity(stackTraceSeverity Severity) {
-	o.mu.Lock()
-	if !stackTraceSeverity.IsValid() {
-		stackTraceSeverity = SeverityInfo
-	}
-	o.stackTraceSeverity = stackTraceSeverity
 	o.mu.Unlock()
 }

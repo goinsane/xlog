@@ -39,6 +39,9 @@ func itoa(buf *[]byte, i int, wid int) {
 
 // CallersToStackTrace generates stack trace output from stack callers.
 func CallersToStackTrace(callers Callers, padding []byte) []byte {
+	if callers == nil {
+		return nil
+	}
 	frames := runtime.CallersFrames(callers)
 	buf := bytes.NewBuffer(make([]byte, 0, 128))
 	for {
@@ -168,14 +171,14 @@ func V(verbosity Verbose) *Logger {
 	return defLogger.V(verbosity)
 }
 
-// SetPrintSeverity sets the default logger's Print functions severity. If printSeverity is invalid, it sets SeverityInfo.
-// By default, SeverityInfo.
+// SetPrintSeverity sets the default logger's severity level which is using with Print functions.
+// If printSeverity is invalid, it sets SeverityInfo. By default, SeverityInfo.
 func SetPrintSeverity(printSeverity Severity) {
 	defLogger.SetPrintSeverity(printSeverity)
 }
 
-// SetStackTraceSeverity sets the default logger's stack trace severity. If stackTraceSeverity is invalid, it sets SeverityNone.
-// By default, SeverityNone.
+// SetStackTraceSeverity sets the default logger's severity level which allows printing stack trace.
+// If stackTraceSeverity is invalid, it sets SeverityNone. By default, SeverityNone.
 func SetStackTraceSeverity(stackTraceSeverity Severity) {
 	defLogger.SetStackTraceSeverity(stackTraceSeverity)
 }
@@ -193,9 +196,4 @@ func WithFields(fields Fields) *Logger {
 // SetOutputFlags sets the default output flags.
 func SetOutputFlags(flags OutputFlag) {
 	defOutput.SetFlags(flags)
-}
-
-// SetOutputStackTraceSeverity sets the default output severity level which allows printing stack trace. By default, SeverityInfo.
-func SetOutputStackTraceSeverity(stackTraceSeverity Severity) {
-	defOutput.SetStackTraceSeverity(stackTraceSeverity)
 }
