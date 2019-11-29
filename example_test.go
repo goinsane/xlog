@@ -34,6 +34,7 @@ func ExampleTest() {
 	logger := xlog.New(xlog.NewTextOutput(os.Stdout, xlog.OutputFlagSeverity), xlog.SeverityInfo, 2)
 
 	logger.Info("this is info log, verbosity 0")
+	logger.Print("this is info log, verbosity 0 caused by Print()")
 	logger.V(0).Warning("this is warning log, verbosity 0")
 	logger.V(1).Warning("this is warning log, verbosity 1")
 	logger.V(2).Error("this is error log, verbosity 2")
@@ -45,6 +46,7 @@ func ExampleTest() {
 
 	// Output:
 	// INFO: this is info log, verbosity 0
+	// INFO: this is info log, verbosity 0 caused by Print()
 	// WARNING: this is warning log, verbosity 0
 	// WARNING: this is warning log, verbosity 1
 	// ERROR: this is error log, verbosity 2
