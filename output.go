@@ -3,8 +3,10 @@ package xlog
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -120,7 +122,7 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 		idx := bytes.IndexByte(msg, '\n')
 		if idx < 0 {
 			msg = append(msg, '\n')
-			idx = len(msg) + 1
+			idx = len(msg)
 		} else {
 			idx++
 		}
@@ -129,6 +131,25 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 			return
 		}
 		msg = msg[idx:]
+	}
+
+	if len(fields) > 0 {
+		fields2 := fields.Clone()
+		sort.Sort(fields2)
+		_, err = o.bw.WriteString("\tFields: ")
+		if err != nil {
+			return
+		}
+		for _, f := range fields2 {
+			_, err = fmt.Fprintf(o.bw, "%s=%q ", f.Key, fmt.Sprintf("%v", f.Val))
+			if err != nil {
+				return
+			}
+		}
+		_, err = o.bw.WriteString("\n")
+		if err != nil {
+			return
+		}
 	}
 
 	if len(callers) > 0 {

@@ -23,6 +23,7 @@ func ExampleDetail() {
 	logger.SetStackTraceSeverity(xlog.SeverityError)
 
 	logger.Info("this is info log, \nverbosity 0")
+	logger.WithFieldKeyVals("c", "d", "a", "b", "a", "x").Error("this is info log, verbosity 0 with fields")
 	logger.V(0).Warning("this is warning log, verbosity 0")
 	logger.V(1).Warning("this is warning log, verbosity 1")
 	logger.V(2).Error("this is error log, verbosity 2")

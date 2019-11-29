@@ -46,10 +46,7 @@ func (l *Logger) clone() *Logger {
 		printSeverity:      l.printSeverity,
 		stackTraceSeverity: l.stackTraceSeverity,
 		tm:                 l.tm,
-		fields:             make(Fields, len(l.fields)),
-	}
-	for key := range l.fields {
-		ln.fields[key] = l.fields[key]
+		fields:             l.fields.Clone(),
 	}
 	l.mu.RUnlock()
 	return ln
@@ -247,10 +244,29 @@ func (l *Logger) WithTime(tm time.Time) *Logger {
 }
 
 // WithFields clones the Logger with given fields.
-func (l *Logger) WithFields(fields Fields) *Logger {
+func (l *Logger) WithFields(fields ...Field) *Logger {
 	ln := l.clone()
-	for key, val := range ln.fields {
-		ln.fields[key] = val
-	}
+	ln.fields = append(ln.fields, fields...)
 	return ln
+}
+
+// WithFieldKeyVals clones the Logger with given key and values of Field.
+func (l *Logger) WithFieldKeyVals(kvs ...interface{}) *Logger {
+	n := len(kvs)/2
+	fields := make(Fields, 0, n)
+	for i := 0; i < n; i++ {
+		j := i*2
+		k, v := fmt.Sprintf("%v", kvs[j]) , kvs[j+1]
+		fields = append(fields, Field{Key: k, Val: v})
+	}
+	return l.WithFields(fields...)
+}
+
+// WithFieldMap clones the Logger with given fieldMap.
+func (l *Logger) WithFieldMap(fieldMap map[string]interface{}) *Logger {
+	fields := make(Fields, 0, len(fieldMap))
+	for k, v := range fieldMap {
+		fields = append(fields, Field{Key: k, Val: v})
+	}
+	return l.WithFields(fields...)
 }

@@ -7,14 +7,48 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 )
 
 // Verbose is type of verbose level.
 type Verbose uint16
 
+// Field is type of field.
+type Field struct {
+	Key string
+	Val interface{}
+}
+
 // Fields is type of fields.
-type Fields map[string]interface{}
+type Fields []Field
+
+// Clone clones Fields.
+func (f Fields) Clone() Fields {
+	if f == nil {
+		return nil
+	}
+	result := make(Fields, 0, len(f))
+	for i := range f {
+		result = append(result, f[i])
+	}
+	return result
+}
+
+// Len is implementation of sort.Interface
+func (f Fields) Len() int {
+	return len(f)
+}
+
+// Less is implementation of sort.Interface
+func (f Fields) Less(i, j int) bool {
+	return strings.Compare(f[i].Key, f[j].Key) < 0
+}
+
+// Swap is implementation of sort.Interface
+func (f Fields) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
 
 // Callers is a type of stack callers.
 type Callers []uintptr
@@ -190,8 +224,8 @@ func WithTime(tm time.Time) *Logger {
 }
 
 // WithFields clones the default logger with given fields.
-func WithFields(fields Fields) *Logger {
-	return defLogger.WithFields(fields)
+func WithFields(fields ...Field) *Logger {
+	return defLogger.WithFields(fields...)
 }
 
 // SetOutputWriter sets the default output writer.
