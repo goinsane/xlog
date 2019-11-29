@@ -4,6 +4,7 @@ package xlog
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"time"
@@ -191,6 +192,11 @@ func WithTime(tm time.Time) *Logger {
 // WithFields clones the default logger with given fields.
 func WithFields(fields Fields) *Logger {
 	return defLogger.WithFields(fields)
+}
+
+// SetOutputWriter sets the default output writer.
+func SetOutputWriter(w io.Writer) {
+	defOutput.SetWriter(w)
 }
 
 // SetOutputFlags sets the default output flags.

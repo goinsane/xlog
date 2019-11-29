@@ -168,7 +168,16 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 	}
 }
 
-// SetFlags sets flags.
+// SetWriter sets output writer.
+func (o *TextOutput) SetWriter(w io.Writer) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.bw.Flush()
+	o.w = w
+	o.bw = bufio.NewWriter(w)
+}
+
+// SetFlags sets output flags.
 func (o *TextOutput) SetFlags(flags OutputFlag) {
 	o.mu.Lock()
 	o.flags = flags
