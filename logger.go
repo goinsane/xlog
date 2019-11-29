@@ -71,9 +71,9 @@ func (l *Logger) output(severity Severity, message string) {
 		if tm.IsZero() {
 			tm = time.Now()
 		}
-		callers := []uintptr(nil)
+		callers := Callers(nil)
 		if l.stackTraceSeverity >= severity {
-			callers = make([]uintptr, 32)
+			callers = make(Callers, 32)
 			callers = callers[:runtime.Callers(4, callers)]
 		}
 		l.out.Log(buf, severity, l.verbosity, tm, l.fields, callers)
@@ -217,8 +217,8 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	return ln
 }
 
-// SetPrintSeverity sets the Logger's Print functions severity. If printSeverity is invalid, it sets SeverityInfo.
-// By default, SeverityInfo.
+// SetPrintSeverity sets the Logger's severity level which is using with Print methods.
+// If printSeverity is invalid, it sets SeverityInfo. By default, SeverityInfo.
 func (l *Logger) SetPrintSeverity(printSeverity Severity) {
 	l.mu.Lock()
 	if !printSeverity.IsValid() {
@@ -228,8 +228,8 @@ func (l *Logger) SetPrintSeverity(printSeverity Severity) {
 	l.mu.Unlock()
 }
 
-// SetStackTraceSeverity sets the Logger's stack trace severity. If stackTraceSeverity is invalid, it sets SeverityNone.
-// By default, SeverityNone.
+// SetStackTraceSeverity sets the Logger's severity level which allows printing stack trace.
+// If stackTraceSeverity is invalid, it sets SeverityNone. By default, SeverityNone.
 func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) {
 	l.mu.Lock()
 	if !stackTraceSeverity.IsValid() {
