@@ -10,13 +10,14 @@ import (
 
 // Logger provides a logger for leveled and structured logging.
 type Logger struct {
-	mu        sync.RWMutex
-	out       Output
-	severity  Severity
-	verbose   Verbose
-	verbosity Verbose
-	tm        time.Time
-	fields    Fields
+	mu                 sync.RWMutex
+	out                Output
+	severity           Severity
+	verbose            Verbose
+	verbosity          Verbose
+	stackTraceSeverity Severity
+	tm                 time.Time
+	fields             Fields
 }
 
 // New creates a new Logger.
@@ -25,21 +26,23 @@ func New(out Output, severity Severity, verbose Verbose) *Logger {
 		severity = SeverityInfo
 	}
 	return &Logger{
-		out:      out,
-		severity: severity,
-		verbose:  verbose,
+		out:                out,
+		severity:           severity,
+		verbose:            verbose,
+		stackTraceSeverity: SeverityNone,
 	}
 }
 
 func (l *Logger) clone() *Logger {
 	l.mu.RLock()
 	ln := &Logger{
-		out:       l.out,
-		severity:  l.severity,
-		verbose:   l.verbose,
-		verbosity: l.verbosity,
-		tm:        l.tm,
-		fields:    make(Fields, len(l.fields)),
+		out:                l.out,
+		severity:           l.severity,
+		verbose:            l.verbose,
+		verbosity:          l.verbosity,
+		stackTraceSeverity: l.stackTraceSeverity,
+		tm:                 l.tm,
+		fields:             make(Fields, len(l.fields)),
 	}
 	for key := range l.fields {
 		ln.fields[key] = l.fields[key]
@@ -64,8 +67,11 @@ func (l *Logger) output(severity Severity, message string) {
 		if tm.IsZero() {
 			tm = time.Now()
 		}
-		callers := make([]uintptr, 32)
-		callers = callers[:runtime.Callers(4, callers)]
+		callers := []uintptr(nil)
+		if l.stackTraceSeverity >= severity {
+			callers = make([]uintptr, 32)
+			callers = callers[:runtime.Callers(4, callers)]
+		}
 		l.out.Log(buf, severity, l.verbosity, tm, l.fields, callers)
 	}
 	l.mu.RUnlock()
@@ -190,6 +196,16 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	ln := l.clone()
 	ln.verbosity = verbosity
 	return ln
+}
+
+// SetStackTraceSeverity sets the Logger's stack trace severity. By default, SeverityNone.
+func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) {
+	l.mu.Lock()
+	if !stackTraceSeverity.IsValid() {
+		stackTraceSeverity = SeverityNone
+	}
+	l.stackTraceSeverity = stackTraceSeverity
+	l.mu.Unlock()
 }
 
 // WithTime clones the Logger with given time.

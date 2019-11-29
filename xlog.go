@@ -132,17 +132,17 @@ func Debugln(args ...interface{}) {
 	defLogger.logln(SeverityDebug, args...)
 }
 
-// SetOutput sets the default loggers's output. By default, the default output.
+// SetOutput sets the default logger's output. By default, the default output.
 func SetOutput(out Output) {
 	defLogger.SetOutput(out)
 }
 
-// SetSeverity sets the default loggers's severity. By default, SeverityInfo.
+// SetSeverity sets the default logger's severity. By default, SeverityInfo.
 func SetSeverity(severity Severity) {
 	defLogger.SetSeverity(severity)
 }
 
-// SetVerbose sets the default loggers's verbose. By default, 0.
+// SetVerbose sets the default logger's verbose. By default, 0.
 func SetVerbose(verbose Verbose) {
 	defLogger.SetVerbose(verbose)
 }
@@ -150,6 +150,11 @@ func SetVerbose(verbose Verbose) {
 // V clones the default logger with given verbosity.
 func V(verbosity Verbose) *Logger {
 	return defLogger.V(verbosity)
+}
+
+// SetStackTraceSeverity sets the default logger's stack trace severity. By default, SeverityNone.
+func SetStackTraceSeverity(stackTraceSeverity Severity) {
+	defLogger.SetStackTraceSeverity(stackTraceSeverity)
 }
 
 // WithTime clones the default logger with given time.
