@@ -63,6 +63,8 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
+	defer o.bw.Flush()
+
 	buf := make([]byte, 128)
 	padLen := 0
 
@@ -164,8 +166,6 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 			return
 		}
 	}
-
-	o.bw.Flush()
 }
 
 // SetFlags sets flags.
