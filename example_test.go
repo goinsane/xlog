@@ -10,12 +10,13 @@ func Example() {
 	xlog.Reset()
 
 	// set output flags for testable results
-	xlog.SetOutputFlags(xlog.OutputFlagSeverity | xlog.OutputFlagPadding)
+	xlog.SetOutputFlags(xlog.OutputFlagSeverity)
 
 	xlog.Debug("this is debug log, verbosity 0. it will not be shown.")
 	xlog.Info("this is info log, verbosity 0.")
 	xlog.V(1).Info("this is info log, verbosity 1. it will not be shown.")
 	xlog.Print("this is info log, verbosity 0 caused by Print().")
+	xlog.Warning("this is warning log,\nverbosity 0.")
 
 	xlog.SetSeverity(xlog.SeverityDebug)
 	xlog.Debug("this is debug log, verbosity 0.")
@@ -27,6 +28,7 @@ func Example() {
 	xlog.SetPrintSeverity(xlog.SeverityWarning)
 	xlog.Print("this is warning log, verbosity 0 caused by Print().")
 
+	xlog.SetOutputFlags(xlog.OutputFlagSeverity | xlog.OutputFlagPadding)
 	xlog.Error("this is error log,\nverbosity 0.")
 
 	xlog.SetOutputFlags(xlog.OutputFlagSeverity | xlog.OutputFlagPadding | xlog.OutputFlagFields)
@@ -39,6 +41,8 @@ func Example() {
 	// Output:
 	// INFO: this is info log, verbosity 0.
 	// INFO: this is info log, verbosity 0 caused by Print().
+	// WARNING: this is warning log,
+	// verbosity 0.
 	// DEBUG: this is debug log, verbosity 0.
 	// INFO: this is info log, verbosity 0.
 	// INFO: this is info log, verbosity 1.
