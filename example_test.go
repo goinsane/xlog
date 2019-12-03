@@ -1,8 +1,9 @@
 package xlog_test
 
 import (
-	"github.com/goinsane/xlog"
 	"time"
+
+	"github.com/goinsane/xlog"
 )
 
 func Example() {
