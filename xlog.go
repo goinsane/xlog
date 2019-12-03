@@ -4,6 +4,7 @@ package xlog
 import (
 	"bytes"
 	"fmt"
+	"go/build"
 	"io"
 	"os"
 	"runtime"
@@ -72,6 +73,19 @@ func itoa(buf *[]byte, i int, wid int) {
 	*buf = append(*buf, b[bp:]...)
 }
 
+func trimSrcpath(s string) string {
+	var r string
+	r = strings.TrimPrefix(s, build.Default.GOROOT+"/src/")
+	if r != s {
+		return r
+	}
+	r = strings.TrimPrefix(s, build.Default.GOPATH+"/src/")
+	if r != s {
+		return r
+	}
+	return s
+}
+
 // CallersToStackTrace generates stack trace output from stack callers.
 func CallersToStackTrace(callers Callers, padding []byte) []byte {
 	if callers == nil {
@@ -84,7 +98,7 @@ func CallersToStackTrace(callers Callers, padding []byte) []byte {
 		buf.Write(padding)
 		buf.WriteString(fmt.Sprintf("%s\n", frame.Function))
 		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("\t%s:%d\n", frame.File, frame.Line))
+		buf.WriteString(fmt.Sprintf("\t%s:%d\n", trimSrcpath(frame.File), frame.Line))
 		if !more {
 			break
 		}
@@ -228,6 +242,11 @@ func WithFields(fields ...Field) *Logger {
 	return defLogger.WithFields(fields...)
 }
 
+// WithFieldKeyVals clones default logger with given key and values of Field.
+func WithFieldKeyVals(kvs ...interface{}) *Logger {
+	return defLogger.WithFieldKeyVals(kvs...)
+}
+
 // SetOutputWriter sets the default output writer.
 func SetOutputWriter(w io.Writer) {
 	defOutput.SetWriter(w)
@@ -236,4 +255,15 @@ func SetOutputWriter(w io.Writer) {
 // SetOutputFlags sets the default output flags.
 func SetOutputFlags(flags OutputFlag) {
 	defOutput.SetFlags(flags)
+}
+
+// Reset resets default logger and output options.
+func Reset() {
+	SetOutput(defOutput)
+	SetSeverity(SeverityInfo)
+	SetVerbose(0)
+	SetPrintSeverity(SeverityInfo)
+	SetStackTraceSeverity(SeverityNone)
+	SetOutputWriter(os.Stdout)
+	SetOutputFlags(OutputFlagDefault)
 }

@@ -155,7 +155,7 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 		for _, f := range fields2 {
 			buf = append(buf, fmt.Sprintf("%s=%q ", f.Key, fmt.Sprintf("%v", f.Val))...)
 		}
-		buf = append(buf, '\n')
+		buf = append(buf[:len(buf)-1], '\n')
 		_, err = o.bw.Write(buf)
 		if err != nil {
 			return
@@ -170,6 +170,7 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 			f := runtime.FuncForPC(callers[0])
 			if f != nil {
 				file, line = f.FileLine(callers[0])
+				file = trimSrcpath(file)
 			}
 			if o.flags&OutputFlagShortFile != 0 {
 				short := file
@@ -213,6 +214,6 @@ func (o *TextOutput) SetWriter(w io.Writer) {
 // SetFlags sets output flags.
 func (o *TextOutput) SetFlags(flags OutputFlag) {
 	o.mu.Lock()
+	defer o.mu.Unlock()
 	o.flags = flags
-	o.mu.Unlock()
 }
