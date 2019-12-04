@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var err error
-	output, err := gelfoutput.NewGelfOutput(gelfoutput.GelfWriterTypeTCP, "192.168.199.213:12220", 10, gelfoutput.GelfOptions{})
+	output, err := gelfoutput.NewGelfOutput(gelfoutput.GelfWriterTypeTCP, "127.0.0.1:12201", 10, gelfoutput.GelfOptions{})
 	if err != nil {
 		xlog.Fatal(err)
 	}
