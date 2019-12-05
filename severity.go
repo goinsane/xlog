@@ -23,12 +23,16 @@ func (sv Severity) IsValid() bool {
 const (
 	// SeverityFatal is fatal severity level
 	SeverityFatal = Severity(iota)
+
 	// SeverityError is error severity level
 	SeverityError
+
 	// SeverityWarning is warning severity level
 	SeverityWarning
+
 	// SeverityInfo is info severity level
 	SeverityInfo
+
 	// SeverityDebug is debug severity level
 	SeverityDebug
 )
