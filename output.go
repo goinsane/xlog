@@ -166,11 +166,10 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 	}
 
 	if len(fields) > 0 && o.flags&OutputFlagFields != 0 {
-		fields2 := fields.Clone()
-		sort.Sort(fields2)
+		sort.Sort(fields)
 		buf = buf[:0]
 		buf = append(buf, "\tFields: "...)
-		for _, f := range fields2 {
+		for _, f := range fields {
 			buf = append(buf, fmt.Sprintf("%s=%q ", f.Key, fmt.Sprintf("%v", f.Val))...)
 		}
 		buf = append(buf[:len(buf)-1], '\n')
