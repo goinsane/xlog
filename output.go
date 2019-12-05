@@ -41,6 +41,7 @@ func (a *asyncOutput) Log(msg []byte, severity Severity, verbose Verbose, tm tim
 	go a.Log(msg, severity, verbose, tm, fields, callers)
 }
 
+// AsyncOutput creates a output that doesn't blocks its logs to the provided output.
 func AsyncOutput(output Output) Output {
 	return &asyncOutput{output}
 }
