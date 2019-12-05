@@ -42,7 +42,7 @@ func main() {
 			xlog.Info("terminated")
 			return
 		default:
-			logger.WithFieldKeyVals("key1", "val1").Info("test")
+			logger.WithFieldKeyVals("key1", "val1", "key2", "val2", "key1", "val1-2", "key1", "val1-3").Info("test")
 			if i > 0 && i%100 == 0 {
 				xlog.Infof("sent %d logs", i)
 			}
