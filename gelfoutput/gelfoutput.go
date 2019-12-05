@@ -126,6 +126,7 @@ func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbos
 		Facility: o.opts.Facility,
 		Extra:    make(map[string]interface{}),
 	}
+	m.Extra["severity"] = severity.String()
 	for i := range fields {
 		field := &fields[i]
 		key := "_" + field.Key
@@ -137,7 +138,6 @@ func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbos
 	o.mu.Lock()
 	o.writeMessage(m)
 	o.mu.Unlock()
-
 }
 
 func (o *GelfOutput) writeMessage(m *gelf.Message) {
