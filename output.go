@@ -200,10 +200,11 @@ const (
 
 // TextOutput is an implementation of Output by writing texts to io.Writer w.
 type TextOutput struct {
-	mu    sync.Mutex
-	w     io.Writer
-	bw    *bufio.Writer
-	flags OutputFlag
+	mu      sync.Mutex
+	w       io.Writer
+	bw      *bufio.Writer
+	flags   OutputFlag
+	onError *func(error)
 }
 
 // NewTextOutput creates a new TextOutput.
@@ -216,22 +217,34 @@ func NewTextOutput(w io.Writer, flags OutputFlag) *TextOutput {
 }
 
 // Log implementes Output.Log
-func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
+func (t *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
 	var err error
-	o.mu.Lock()
-	defer o.mu.Unlock()
+	defer func() {
+		if err == nil || t.onError == nil || *t.onError == nil {
+			return
+		}
+		(*t.onError)(err)
+	}()
 
-	defer o.bw.Flush()
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	defer func() {
+		e := t.bw.Flush()
+		if err == nil {
+			err = e
+		}
+	}()
 
 	buf := make([]byte, 128)
 	padLen := 0
 
 	buf = buf[:0]
-	if o.flags&(OutputFlagDate|OutputFlagTime|OutputFlagMicroseconds) != 0 {
-		if o.flags&OutputFlagUTC != 0 {
+	if t.flags&(OutputFlagDate|OutputFlagTime|OutputFlagMicroseconds) != 0 {
+		if t.flags&OutputFlagUTC != 0 {
 			tm = tm.UTC()
 		}
-		if o.flags&OutputFlagDate != 0 {
+		if t.flags&OutputFlagDate != 0 {
 			year, month, day := tm.Date()
 			itoa(&buf, year, 4)
 			buf = append(buf, '/')
@@ -240,28 +253,28 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 			itoa(&buf, day, 2)
 			buf = append(buf, ' ')
 		}
-		if o.flags&(OutputFlagTime|OutputFlagMicroseconds) != 0 {
+		if t.flags&(OutputFlagTime|OutputFlagMicroseconds) != 0 {
 			hour, min, sec := tm.Clock()
 			itoa(&buf, hour, 2)
 			buf = append(buf, ':')
 			itoa(&buf, min, 2)
 			buf = append(buf, ':')
 			itoa(&buf, sec, 2)
-			if o.flags&OutputFlagMicroseconds != 0 {
+			if t.flags&OutputFlagMicroseconds != 0 {
 				buf = append(buf, '.')
 				itoa(&buf, tm.Nanosecond()/1e3, 6)
 			}
 			buf = append(buf, ' ')
 		}
 	}
-	if o.flags&OutputFlagSeverity != 0 {
+	if t.flags&OutputFlagSeverity != 0 {
 		buf = append(buf, severity.String()...)
 		buf = append(buf, ": "...)
 	}
-	if o.flags&OutputFlagPadding != 0 {
+	if t.flags&OutputFlagPadding != 0 {
 		padLen = len(buf)
 	}
-	_, err = o.bw.Write(buf)
+	_, err = t.bw.Write(buf)
 	if err != nil {
 		return
 	}
@@ -270,7 +283,7 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 
 	for i := 0; len(msg) > 0; i++ {
 		if i > 0 {
-			_, err = o.bw.WriteString(padding)
+			_, err = t.bw.WriteString(padding)
 			if err != nil {
 				return
 			}
@@ -282,14 +295,14 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 		} else {
 			idx++
 		}
-		_, err = o.bw.Write(msg[:idx])
+		_, err = t.bw.Write(msg[:idx])
 		if err != nil {
 			return
 		}
 		msg = msg[idx:]
 	}
 
-	if len(fields) > 0 && o.flags&OutputFlagFields != 0 {
+	if len(fields) > 0 && t.flags&OutputFlagFields != 0 {
 		sort.Sort(fields)
 		buf = buf[:0]
 		buf = append(buf, "\tFields: "...)
@@ -297,14 +310,14 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 			buf = append(buf, fmt.Sprintf("%s=%q ", f.Key, fmt.Sprintf("%v", f.Val))...)
 		}
 		buf = append(buf[:len(buf)-1], '\n')
-		_, err = o.bw.Write(buf)
+		_, err = t.bw.Write(buf)
 		if err != nil {
 			return
 		}
 	}
 
 	if len(callers) > 0 {
-		if o.flags&(OutputFlagLongFile|OutputFlagShortFile) != 0 {
+		if t.flags&(OutputFlagLongFile|OutputFlagShortFile) != 0 {
 			buf = buf[:0]
 			buf = append(buf, "\tFile: "...)
 			file, line := "???", 0
@@ -313,7 +326,7 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 				file, line = f.FileLine(callers[0])
 				file = trimSrcpath(file)
 			}
-			if o.flags&OutputFlagShortFile != 0 {
+			if t.flags&OutputFlagShortFile != 0 {
 				short := file
 				for i := len(file) - 1; i > 0; i-- {
 					if file[i] == '/' {
@@ -327,15 +340,15 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 			buf = append(buf, ':')
 			itoa(&buf, line, -1)
 			buf = append(buf, '\n')
-			_, err = o.bw.Write(buf)
+			_, err = t.bw.Write(buf)
 			if err != nil {
 				return
 			}
 		}
-		if o.flags&OutputFlagStackTrace != 0 {
+		if t.flags&OutputFlagStackTrace != 0 {
 			buf = buf[:0]
 			buf = append(buf, CallersToStackTrace(callers, []byte("\t"))...)
-			_, err = o.bw.Write(buf)
+			_, err = t.bw.Write(buf)
 			if err != nil {
 				return
 			}
@@ -344,17 +357,32 @@ func (o *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 }
 
 // SetWriter sets output writer.
-func (o *TextOutput) SetWriter(w io.Writer) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	o.bw.Flush()
-	o.w = w
-	o.bw = bufio.NewWriter(w)
+func (t *TextOutput) SetWriter(w io.Writer) {
+	var err error
+	defer func() {
+		if err == nil || t.onError == nil || *t.onError == nil {
+			return
+		}
+		(*t.onError)(err)
+	}()
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	err = t.bw.Flush()
+
+	t.w = w
+	t.bw = bufio.NewWriter(w)
 }
 
 // SetFlags sets output flags.
-func (o *TextOutput) SetFlags(flags OutputFlag) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	o.flags = flags
+func (t *TextOutput) SetFlags(flags OutputFlag) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.flags = flags
+}
+
+// RegisterOnError registers OnError function to use when error occured.
+func (t *TextOutput) RegisterOnError(f func(error)) {
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&t.onError)), unsafe.Pointer(&f))
 }
