@@ -24,10 +24,12 @@ func (m multiOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 	for _, o := range m {
 		newmsg := make([]byte, len(msg))
 		copy(newmsg, msg)
-		go o.Log(newmsg, severity, verbose, tm, fields.Clone(), callers.Clone())
+		//go o.Log(newmsg, severity, verbose, tm, fields.Clone(), callers.Clone())
+		o.Log(newmsg, severity, verbose, tm, fields.Clone(), callers.Clone())
 	}
 }
 
+// MultiOutput creates a output that duplicates its logs to all the provided outputs.
 func MultiOutput(outputs ...Output) Output {
 	m := make(multiOutput, len(outputs))
 	copy(m, outputs)
