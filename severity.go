@@ -7,9 +7,8 @@ type Severity int
 
 // String returns severity name by string.
 func (sv Severity) String() string {
-	idx := int(sv)
-	if idx < len(sSeverities) {
-		return sSeverities[idx]
+	if sv.IsValid() {
+		return sSeverities[int(sv)]
 	}
 	return sSeverityNone
 }
