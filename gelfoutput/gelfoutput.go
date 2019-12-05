@@ -2,13 +2,11 @@ package gelfoutput
 
 import (
 	"context"
-	"os"
-	"sync/atomic"
-	"time"
-	"unsafe"
-
 	"github.com/goinsane/xlog"
 	"gopkg.in/Graylog2/go-gelf.v2/gelf"
+	"os"
+	"sync"
+	"time"
 )
 
 type GelfWriterType int
@@ -58,46 +56,46 @@ type GelfOptions struct {
 }
 
 type GelfOutput struct {
-	ctx         context.Context
-	ctxCancel   context.CancelFunc
-	writerType  GelfWriterType
-	addr        string
-	queue       chan *gelf.Message
-	opts        GelfOptions
-	w           gelfWriter
-	onQueueFull *func()
+	mu         sync.Mutex
+	ctx        context.Context
+	ctxCancel  context.CancelFunc
+	writerType GelfWriterType
+	addr       string
+	opts       GelfOptions
+	writer     gelfWriter
 }
 
-func NewGelfOutput(writerType GelfWriterType, addr string, queueLen int, opts GelfOptions) (g *GelfOutput, err error) {
+func NewGelfOutput(writerType GelfWriterType, addr string, opts GelfOptions) (o *GelfOutput, err error) {
 	if !writerType.IsValid() {
 		err = ErrUnknownGelfWriterType
 		return
 	}
-	if queueLen <= 0 {
-		queueLen = 1
-	}
-	g = &GelfOutput{
+	o = &GelfOutput{
 		writerType: writerType,
 		addr:       addr,
-		queue:      make(chan *gelf.Message, queueLen),
 		opts:       opts,
 	}
-	if g.opts.Host == "" {
+	if o.opts.Host == "" {
 		osHostname, _ := os.Hostname()
-		g.opts.Host = osHostname
+		o.opts.Host = osHostname
 	}
-	g.ctx, g.ctxCancel = context.WithCancel(context.Background())
-	go g.worker()
+	o.ctx, o.ctxCancel = context.WithCancel(context.Background())
 	return
 }
 
-func (g *GelfOutput) Close() {
-	g.ctxCancel()
+func (o *GelfOutput) Close() {
+	o.ctxCancel()
+	o.mu.Lock()
+	if o.writer != nil {
+		o.writer.Close()
+		o.writer = nil
+	}
+	o.mu.Unlock()
 }
 
-func (g *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbose, tm time.Time, fields xlog.Fields, callers xlog.Callers) {
+func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbose, tm time.Time, fields xlog.Fields, callers xlog.Callers) {
 	select {
-	case <-g.ctx.Done():
+	case <-o.ctx.Done():
 		return
 	default:
 	}
@@ -120,12 +118,12 @@ func (g *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbos
 	}
 	m := &gelf.Message{
 		Version:  "1.1",
-		Host:     g.opts.Host,
+		Host:     o.opts.Host,
 		Short:    string(msg),
 		Full:     "",
 		TimeUnix: float64(tm2.UnixNano()) / float64(time.Second),
 		Level:    level,
-		Facility: g.opts.Facility,
+		Facility: o.opts.Facility,
 		Extra:    make(map[string]interface{}),
 	}
 	for i := range fields {
@@ -136,68 +134,35 @@ func (g *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbos
 		}*/
 		m.Extra[key] = field.Val
 	}
-	select {
-	case g.queue <- m:
-	default:
-		if g.onQueueFull != nil && *g.onQueueFull != nil {
-			(*g.onQueueFull)()
-		}
-	}
+	o.mu.Lock()
+	o.writeMessage(m)
+	o.mu.Unlock()
+
 }
 
-func (g *GelfOutput) RegisterOnQueueFull(f func()) {
-	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&g.onQueueFull)), unsafe.Pointer(&f))
-}
-
-func (g *GelfOutput) WaitForIdle(ctx context.Context) error {
+func (o *GelfOutput) writeMessage(m *gelf.Message) {
 	for {
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(50 * time.Millisecond):
-			if len(g.queue) == 0 {
-				return nil
-			}
-		}
-	}
-}
-
-func (g *GelfOutput) writeMessage(m *gelf.Message) {
-	for {
-		select {
-		case <-g.ctx.Done():
+		case <-o.ctx.Done():
 			return
 		default:
 		}
 		var e error
-		if g.w == nil {
-			time.Sleep(1 * time.Second)
-			g.w, e = newGelfWriter(g.writerType, g.addr)
+		if o.writer == nil {
+			o.writer, e = newGelfWriter(o.writerType, o.addr)
 			if e != nil {
+				o.writer = nil
+				time.Sleep(250 * time.Millisecond)
 				continue
 			}
 		}
-		e = g.w.WriteMessage(m)
-		if e == nil {
-			break
+		e = o.writer.WriteMessage(m)
+		if e != nil {
+			o.writer.Close()
+			o.writer = nil
+			time.Sleep(250 * time.Millisecond)
+			continue
 		}
-		g.w.Close()
-		g.w = nil
-	}
-}
-
-func (g *GelfOutput) worker() {
-	g.w, _ = newGelfWriter(g.writerType, g.addr)
-	for done := false; !done; {
-		select {
-		case <-g.ctx.Done():
-			done = true
-		case m := <-g.queue:
-			g.writeMessage(m)
-		}
-	}
-	if g.w != nil {
-		g.w.Close()
-		g.w = nil
+		return
 	}
 }
