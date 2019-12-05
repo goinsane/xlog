@@ -54,6 +54,17 @@ func (f Fields) Swap(i, j int) {
 // Callers is a type of stack callers.
 type Callers []uintptr
 
+func (c Callers) Clone() Callers {
+	if c == nil {
+		return nil
+	}
+	result := make(Callers, 0, len(c))
+	for i := range c {
+		result = append(result, c[i])
+	}
+	return result
+}
+
 var (
 	defLogger *Logger     = New(defOutput, SeverityInfo, 0)
 	defOutput *TextOutput = NewTextOutput(os.Stdout, OutputFlagDefault)
