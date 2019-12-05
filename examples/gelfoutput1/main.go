@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"os"
 	"os/signal"
 	"time"
@@ -11,8 +12,12 @@ import (
 )
 
 func main() {
+	var addr string
+	flag.StringVar(&addr, "a", "127.0.0.1:12201", "graylog address")
+	flag.Parse()
+
 	var err error
-	gelfOutput, err := gelfoutput.NewGelfOutput(gelfoutput.GelfWriterTypeTCP, "127.0.0.1:12201", gelfoutput.GelfOptions{})
+	gelfOutput, err := gelfoutput.NewGelfOutput(gelfoutput.GelfWriterTypeTCP, addr, gelfoutput.GelfOptions{})
 	if err != nil {
 		xlog.Fatal(err)
 	}
@@ -30,7 +35,7 @@ func main() {
 		case <-sigCh:
 			xlog.Info("terminating")
 			ctx, ctxCancel := context.WithTimeout(context.Background(), 2*time.Second)
-			if err := queuedOutput.WaitForIdle(ctx); err != nil {
+			if err := queuedOutput.WaitForEmpty(ctx); err != nil {
 				xlog.Error(err)
 			}
 			ctxCancel()
