@@ -58,8 +58,8 @@ type logRecord struct {
 	callers  Callers
 }
 
-// QueuedOutput is intermediate Output implementations between Logger and other Output implementations.
-// QueuedOutput has queueing for unblocking Log function.
+// QueuedOutput is intermediate Output implementation between Logger and given Output.
+// QueuedOutput has queueing for unblocking Log() method.
 type QueuedOutput struct {
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
