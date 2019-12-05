@@ -3,13 +3,16 @@ package xlog
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"runtime"
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 )
 
 // Output is an interface for Logger output. All of Output implementations must be
@@ -35,7 +38,7 @@ func MultiOutput(outputs ...Output) Output {
 	return m
 }
 
-type asyncOutput struct { Output }
+type asyncOutput struct{ Output }
 
 func (a *asyncOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
 	go a.Output.Log(msg, severity, verbose, tm, fields, callers)
@@ -44,6 +47,117 @@ func (a *asyncOutput) Log(msg []byte, severity Severity, verbose Verbose, tm tim
 // AsyncOutput creates a output that doesn't blocks its logs to the provided output.
 func AsyncOutput(output Output) Output {
 	return &asyncOutput{output}
+}
+
+type logRecord struct {
+	msg      []byte
+	severity Severity
+	verbose  Verbose
+	tm       time.Time
+	fields   Fields
+	callers  Callers
+}
+
+// QueuedOutput is intermediate Output implementations between Logger and other Output implementations.
+// QueuedOutput has queueing for unblocking Log function.
+type QueuedOutput struct {
+	ctx         context.Context
+	ctxCancel   context.CancelFunc
+	output      Output
+	queue       chan *logRecord
+	blocking    uint32
+	onQueueFull *func()
+}
+
+// NewQueuedOutput creates QueuedOutput by given output.
+func NewQueuedOutput(output Output, queueLen int) (q *QueuedOutput) {
+	if queueLen < 0 {
+		queueLen = 0
+	}
+	q = &QueuedOutput{
+		output: output,
+		queue:  make(chan *logRecord, queueLen),
+	}
+	q.ctx, q.ctxCancel = context.WithCancel(context.Background())
+	go q.worker()
+	return
+}
+
+// Close closed QueuedOutput. Unused QueuedOutput's must be closed for freeing resources.
+func (q *QueuedOutput) Close() {
+	q.ctxCancel()
+}
+
+// Log is implementation of Output interface.
+// If blocking is true, Log method blocks execution until underlying output has finished execution.
+// Otherwise, Log method sends log to queue if queue is available. When queue is full, it tries to call OnQueueFull
+// function.
+func (q *QueuedOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
+	select {
+	case <-q.ctx.Done():
+		return
+	default:
+	}
+	r := &logRecord{
+		msg:      msg,
+		severity: severity,
+		verbose:  verbose,
+		tm:       tm,
+		fields:   fields,
+		callers:  callers,
+	}
+	if q.blocking != 0 {
+		q.queue <- r
+		return
+	}
+	select {
+	case q.queue <- r:
+	default:
+		if q.onQueueFull != nil && *q.onQueueFull != nil {
+			(*q.onQueueFull)()
+		}
+	}
+}
+
+// SetBlocking sets QueuedOutput behavior when queue is full.
+func (q *QueuedOutput) SetBlocking(blocking bool) {
+	var b uint32
+	if blocking {
+		b = 1
+	}
+	atomic.StoreUint32(&q.blocking, b)
+}
+
+// RegisterOnQueueFull registers OnQueueFull function to use when queue is full.
+func (q *QueuedOutput) RegisterOnQueueFull(f func()) {
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&q.onQueueFull)), unsafe.Pointer(&f))
+}
+
+// WaitForIdle waits until queue is empty by given context.
+func (q *QueuedOutput) WaitForIdle(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(50 * time.Millisecond):
+			if len(q.queue) == 0 {
+				return nil
+			}
+		}
+	}
+}
+
+func (q *QueuedOutput) worker() {
+	for done := false; !done; {
+		select {
+		case <-q.ctx.Done():
+			done = true
+		case r := <-q.queue:
+			if q.output != nil {
+				q.output.Log(r.msg, r.severity, r.verbose, r.tm, r.fields, r.callers)
+			}
+		}
+	}
 }
 
 // OutputFlag is type of output flag.
