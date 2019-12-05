@@ -133,8 +133,8 @@ func (q *QueuedOutput) RegisterOnQueueFull(f func()) {
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&q.onQueueFull)), unsafe.Pointer(&f))
 }
 
-// WaitForIdle waits until queue is empty by given context.
-func (q *QueuedOutput) WaitForIdle(ctx context.Context) error {
+// WaitForEmpty waits until queue is empty by given context.
+func (q *QueuedOutput) WaitForEmpty(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
