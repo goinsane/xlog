@@ -15,7 +15,23 @@ import (
 // Output is an interface for Logger output. All of Output implementations must be
 // concurrent-safe.
 type Output interface {
-	Log([]byte, Severity, Verbose, time.Time, Fields, Callers)
+	Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers)
+}
+
+type multiOutput []Output
+
+func (m multiOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
+	for _, o := range m {
+		newmsg := make([]byte, len(msg))
+		copy(newmsg, msg)
+		go o.Log(newmsg, severity, verbose, tm, fields.Clone(), callers.Clone())
+	}
+}
+
+func MultiOutput(outputs ...Output) Output {
+	m := make(multiOutput, len(outputs))
+	copy(m, outputs)
+	return m
 }
 
 // OutputFlag is type of output flag.
