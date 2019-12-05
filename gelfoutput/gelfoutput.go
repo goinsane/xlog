@@ -1,16 +1,20 @@
+// Package gelfoutput provides GELF output implementation of xlog.Output
 package gelfoutput
 
 import (
 	"context"
-	"github.com/goinsane/xlog"
-	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/goinsane/xlog"
+	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 )
 
+// GelfWriterType defines type of GELF writer.
 type GelfWriterType int
 
+// IsValid checks GelfWriterType value is valid.
 func (t GelfWriterType) IsValid() bool {
 	return t >= GelfWriterTypeUDP && t <= GelfWriterTypeTCP
 }
@@ -50,11 +54,13 @@ func newGelfWriter(writerType GelfWriterType, addr string) (w gelfWriter, err er
 	return
 }
 
+// GelfOptions defines several GELF options.
 type GelfOptions struct {
 	Host     string
 	Facility string
 }
 
+// GelfOutput implements xlog.Output for GELF output.
 type GelfOutput struct {
 	mu         sync.Mutex
 	ctx        context.Context
@@ -65,6 +71,7 @@ type GelfOutput struct {
 	writer     gelfWriter
 }
 
+// NewGelfOutput creates a new GelfOutput.
 func NewGelfOutput(writerType GelfWriterType, addr string, opts GelfOptions) (o *GelfOutput, err error) {
 	if !writerType.IsValid() {
 		err = ErrUnknownGelfWriterType
@@ -83,6 +90,7 @@ func NewGelfOutput(writerType GelfWriterType, addr string, opts GelfOptions) (o 
 	return
 }
 
+// Close closes GelfOutput. Unused GelfOutput must be closed for freeing resources.
 func (o *GelfOutput) Close() {
 	o.ctxCancel()
 	o.mu.Lock()
@@ -93,6 +101,7 @@ func (o *GelfOutput) Close() {
 	o.mu.Unlock()
 }
 
+// Log is implementation of Output interface.
 func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbose, tm time.Time, fields xlog.Fields, callers xlog.Callers) {
 	select {
 	case <-o.ctx.Done():
@@ -130,8 +139,12 @@ func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbos
 	for i := range fields {
 		field := &fields[i]
 		key := "_" + field.Key
-		/*if _, ok := m.Extra[key]; ok {
-			continue
+		/*for {
+			_, ok := m.Extra[key]
+			if !ok {
+				break
+			}
+			key = "_" + key
 		}*/
 		m.Extra[key] = field.Val
 	}

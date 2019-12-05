@@ -83,7 +83,7 @@ func NewQueuedOutput(output Output, queueLen int) (q *QueuedOutput) {
 	return
 }
 
-// Close closed QueuedOutput. Unused QueuedOutput's must be closed for freeing resources.
+// Close closed QueuedOutput. Unused QueuedOutput must be closed for freeing resources.
 func (q *QueuedOutput) Close() {
 	q.ctxCancel()
 }
