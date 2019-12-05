@@ -24,7 +24,6 @@ func (m multiOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 	for _, o := range m {
 		newmsg := make([]byte, len(msg))
 		copy(newmsg, msg)
-		//go o.Log(newmsg, severity, verbose, tm, fields.Clone(), callers.Clone())
 		o.Log(newmsg, severity, verbose, tm, fields.Clone(), callers.Clone())
 	}
 }
@@ -34,6 +33,16 @@ func MultiOutput(outputs ...Output) Output {
 	m := make(multiOutput, len(outputs))
 	copy(m, outputs)
 	return m
+}
+
+type asyncOutput struct { Output }
+
+func (a *asyncOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
+	go a.Log(msg, severity, verbose, tm, fields, callers)
+}
+
+func AsyncOutput(output Output) Output {
+	return &asyncOutput{output}
 }
 
 // OutputFlag is type of output flag.
