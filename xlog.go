@@ -106,6 +106,16 @@ func CallersToStackTrace(callers Callers, padding []byte) []byte {
 	return buf.Bytes()
 }
 
+// DefaultLogger returns the default logger.
+func DefaultLogger() *Logger {
+	return defLogger
+}
+
+// DefaultOutput returns the default output as Output. Type of default output is TextOutput.
+func DefaultOutput() Output {
+	return defOutput
+}
+
 // Fatal logs to the FATAL severity logs to the default logger, then calls os.Exit(1).
 func Fatal(args ...interface{}) {
 	defLogger.log(SeverityFatal, args...)
