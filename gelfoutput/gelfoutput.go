@@ -136,6 +136,9 @@ func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbos
 		Extra:    make(map[string]interface{}),
 	}
 	m.Extra["severity"] = severity.String()
+	if callers != nil {
+		m.Extra["stacktrace"] = string(xlog.CallersToStackTrace(callers, nil))
+	}
 	for i := range fields {
 		field := &fields[i]
 		key := "_" + field.Key

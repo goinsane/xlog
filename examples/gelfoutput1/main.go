@@ -22,14 +22,19 @@ func main() {
 		xlog.Fatal(err)
 	}
 	defer gelfOutput.Close()
+
 	queuedOutput := xlog.NewQueuedOutput(gelfOutput, 10)
 	defer queuedOutput.Close()
 	queuedOutput.RegisterOnQueueFull(func() {
 		xlog.Error("queue full")
 	})
+
 	logger := xlog.New(queuedOutput, xlog.SeverityInfo, 0)
+	logger.SetStackTraceSeverity(xlog.SeverityInfo)
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
+
 	for i := 0; ; i++ {
 		select {
 		case <-sigCh:
