@@ -38,7 +38,7 @@ func MultiOutput(outputs ...Output) Output {
 type asyncOutput struct { Output }
 
 func (a *asyncOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
-	go a.Log(msg, severity, verbose, tm, fields, callers)
+	go a.Output.Log(msg, severity, verbose, tm, fields, callers)
 }
 
 // AsyncOutput creates a output that doesn't blocks its logs to the provided output.
