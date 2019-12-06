@@ -4,19 +4,66 @@ package xlog
 import (
 	"bytes"
 	"fmt"
+	"go/build"
+	"io"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 )
 
 // Verbose is type of verbose level.
 type Verbose uint16
 
+// Field is type of field.
+type Field struct {
+	Key string
+	Val interface{}
+}
+
 // Fields is type of fields.
-type Fields map[string]interface{}
+type Fields []Field
+
+// Clone clones Fields.
+func (f Fields) Clone() Fields {
+	if f == nil {
+		return nil
+	}
+	result := make(Fields, 0, len(f))
+	for i := range f {
+		result = append(result, f[i])
+	}
+	return result
+}
+
+// Len is implementation of sort.Interface
+func (f Fields) Len() int {
+	return len(f)
+}
+
+// Less is implementation of sort.Interface
+func (f Fields) Less(i, j int) bool {
+	return strings.Compare(f[i].Key, f[j].Key) < 0
+}
+
+// Swap is implementation of sort.Interface
+func (f Fields) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
 
 // Callers is a type of stack callers.
 type Callers []uintptr
+
+func (c Callers) Clone() Callers {
+	if c == nil {
+		return nil
+	}
+	result := make(Callers, 0, len(c))
+	for i := range c {
+		result = append(result, c[i])
+	}
+	return result
+}
 
 var (
 	defLogger *Logger     = New(defOutput, SeverityInfo, 0)
@@ -37,8 +84,24 @@ func itoa(buf *[]byte, i int, wid int) {
 	*buf = append(*buf, b[bp:]...)
 }
 
+func trimSrcpath(s string) string {
+	var r string
+	r = strings.TrimPrefix(s, build.Default.GOROOT+"/src/")
+	if r != s {
+		return r
+	}
+	r = strings.TrimPrefix(s, build.Default.GOPATH+"/src/")
+	if r != s {
+		return r
+	}
+	return s
+}
+
 // CallersToStackTrace generates stack trace output from stack callers.
 func CallersToStackTrace(callers Callers, padding []byte) []byte {
+	if callers == nil {
+		return nil
+	}
 	frames := runtime.CallersFrames(callers)
 	buf := bytes.NewBuffer(make([]byte, 0, 128))
 	for {
@@ -46,12 +109,22 @@ func CallersToStackTrace(callers Callers, padding []byte) []byte {
 		buf.Write(padding)
 		buf.WriteString(fmt.Sprintf("%s\n", frame.Function))
 		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("\t%s:%d\n", frame.File, frame.Line))
+		buf.WriteString(fmt.Sprintf("\t%s:%d\n", trimSrcpath(frame.File), frame.Line))
 		if !more {
 			break
 		}
 	}
 	return buf.Bytes()
+}
+
+// DefaultLogger returns the default logger.
+func DefaultLogger() *Logger {
+	return defLogger
+}
+
+// DefaultOutput returns the default output as Output. Type of default output is TextOutput.
+func DefaultOutput() Output {
+	return defOutput
 }
 
 // Fatal logs to the FATAL severity logs to the default logger, then calls os.Exit(1).
@@ -132,17 +205,33 @@ func Debugln(args ...interface{}) {
 	defLogger.logln(SeverityDebug, args...)
 }
 
-// SetOutput sets the default loggers's output. By default, the default output.
+// Print logs to the default logger.
+func Print(args ...interface{}) {
+	defLogger.log(defLogger.printSeverity, args...)
+}
+
+// Printf logs to the default logger.
+func Printf(format string, args ...interface{}) {
+	defLogger.logf(defLogger.printSeverity, format, args...)
+}
+
+// Println logs to the default logger.
+func Println(args ...interface{}) {
+	defLogger.logln(defLogger.printSeverity, args...)
+}
+
+// SetOutput sets the default logger's output. By default, the default output.
 func SetOutput(out Output) {
 	defLogger.SetOutput(out)
 }
 
-// SetSeverity sets the default loggers's severity. By default, SeverityInfo.
+// SetSeverity sets the default logger's severity. If severity is invalid, it sets SeverityInfo.
+// By default, SeverityInfo.
 func SetSeverity(severity Severity) {
 	defLogger.SetSeverity(severity)
 }
 
-// SetVerbose sets the default loggers's verbose. By default, 0.
+// SetVerbose sets the default logger's verbose. By default, 0.
 func SetVerbose(verbose Verbose) {
 	defLogger.SetVerbose(verbose)
 }
@@ -152,14 +241,36 @@ func V(verbosity Verbose) *Logger {
 	return defLogger.V(verbosity)
 }
 
+// SetPrintSeverity sets the default logger's severity level which is using with Print functions.
+// If printSeverity is invalid, it sets SeverityInfo. By default, SeverityInfo.
+func SetPrintSeverity(printSeverity Severity) {
+	defLogger.SetPrintSeverity(printSeverity)
+}
+
+// SetStackTraceSeverity sets the default logger's severity level which allows printing stack trace.
+// If stackTraceSeverity is invalid, it sets SeverityNone. By default, SeverityNone.
+func SetStackTraceSeverity(stackTraceSeverity Severity) {
+	defLogger.SetStackTraceSeverity(stackTraceSeverity)
+}
+
 // WithTime clones the default logger with given time.
 func WithTime(tm time.Time) *Logger {
 	return defLogger.WithTime(tm)
 }
 
 // WithFields clones the default logger with given fields.
-func WithFields(fields Fields) *Logger {
-	return defLogger.WithFields(fields)
+func WithFields(fields ...Field) *Logger {
+	return defLogger.WithFields(fields...)
+}
+
+// WithFieldKeyVals clones default logger with given key and values of Field.
+func WithFieldKeyVals(kvs ...interface{}) *Logger {
+	return defLogger.WithFieldKeyVals(kvs...)
+}
+
+// SetOutputWriter sets the default output writer.
+func SetOutputWriter(w io.Writer) {
+	defOutput.SetWriter(w)
 }
 
 // SetOutputFlags sets the default output flags.
@@ -167,7 +278,13 @@ func SetOutputFlags(flags OutputFlag) {
 	defOutput.SetFlags(flags)
 }
 
-// SetOutputStackTraceSeverity sets the default output severity level which allows printing stack trace. By default, SeverityInfo.
-func SetOutputStackTraceSeverity(stackTraceSeverity Severity) {
-	defOutput.SetStackTraceSeverity(stackTraceSeverity)
+// Reset resets default logger and output options.
+func Reset() {
+	SetOutput(defOutput)
+	SetSeverity(SeverityInfo)
+	SetVerbose(0)
+	SetPrintSeverity(SeverityInfo)
+	SetStackTraceSeverity(SeverityNone)
+	SetOutputWriter(os.Stdout)
+	SetOutputFlags(OutputFlagDefault)
 }

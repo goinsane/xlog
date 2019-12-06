@@ -10,39 +10,43 @@ import (
 
 // Logger provides a logger for leveled and structured logging.
 type Logger struct {
-	mu        sync.RWMutex
-	out       Output
-	severity  Severity
-	verbose   Verbose
-	verbosity Verbose
-	tm        time.Time
-	fields    Fields
+	mu                 sync.RWMutex
+	out                Output
+	severity           Severity
+	verbose            Verbose
+	verbosity          Verbose
+	printSeverity      Severity
+	stackTraceSeverity Severity
+	tm                 time.Time
+	fields             Fields
 }
 
-// New creates a new Logger.
+// New creates a new Logger. If severity is invalid, it sets SeverityInfo.
 func New(out Output, severity Severity, verbose Verbose) *Logger {
 	if !severity.IsValid() {
 		severity = SeverityInfo
 	}
 	return &Logger{
-		out:      out,
-		severity: severity,
-		verbose:  verbose,
+		out:                out,
+		severity:           severity,
+		verbose:            verbose,
+		verbosity:          0,
+		printSeverity:      SeverityInfo,
+		stackTraceSeverity: SeverityNone,
 	}
 }
 
 func (l *Logger) clone() *Logger {
 	l.mu.RLock()
 	ln := &Logger{
-		out:       l.out,
-		severity:  l.severity,
-		verbose:   l.verbose,
-		verbosity: l.verbosity,
-		tm:        l.tm,
-		fields:    make(Fields, len(l.fields)),
-	}
-	for key := range l.fields {
-		ln.fields[key] = l.fields[key]
+		out:                l.out,
+		severity:           l.severity,
+		verbose:            l.verbose,
+		verbosity:          l.verbosity,
+		printSeverity:      l.printSeverity,
+		stackTraceSeverity: l.stackTraceSeverity,
+		tm:                 l.tm,
+		fields:             l.fields.Clone(),
 	}
 	l.mu.RUnlock()
 	return ln
@@ -64,9 +68,12 @@ func (l *Logger) output(severity Severity, message string) {
 		if tm.IsZero() {
 			tm = time.Now()
 		}
-		callers := make([]uintptr, 32)
-		callers = callers[:runtime.Callers(4, callers)]
-		l.out.Log(buf, severity, l.verbosity, tm, l.fields, callers)
+		callers := Callers(nil)
+		if l.stackTraceSeverity >= severity {
+			callers = make(Callers, 32)
+			callers = callers[:runtime.Callers(4, callers)]
+		}
+		l.out.Log(buf, severity, l.verbosity, tm, l.fields.Clone(), callers)
 	}
 	l.mu.RUnlock()
 }
@@ -161,6 +168,21 @@ func (l *Logger) Debugln(args ...interface{}) {
 	l.logln(SeverityDebug, args...)
 }
 
+// Print logs to logs has Logger's print severity.
+func (l *Logger) Print(args ...interface{}) {
+	l.log(l.printSeverity, args...)
+}
+
+// Printf logs to logs has Logger's print severity.
+func (l *Logger) Printf(format string, args ...interface{}) {
+	l.logf(l.printSeverity, format, args...)
+}
+
+// Println logs to logs has Logger's print severity.
+func (l *Logger) Println(args ...interface{}) {
+	l.logln(l.printSeverity, args...)
+}
+
 // SetOutput sets the Logger's output.
 func (l *Logger) SetOutput(out Output) {
 	l.mu.Lock()
@@ -168,7 +190,7 @@ func (l *Logger) SetOutput(out Output) {
 	l.mu.Unlock()
 }
 
-// SetSeverity sets the Logger's severity.
+// SetSeverity sets the Logger's severity. If severity is invalid, it sets SeverityInfo.
 func (l *Logger) SetSeverity(severity Severity) {
 	l.mu.Lock()
 	if !severity.IsValid() {
@@ -192,6 +214,28 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	return ln
 }
 
+// SetPrintSeverity sets the Logger's severity level which is using with Print methods.
+// If printSeverity is invalid, it sets SeverityInfo. By default, SeverityInfo.
+func (l *Logger) SetPrintSeverity(printSeverity Severity) {
+	l.mu.Lock()
+	if !printSeverity.IsValid() {
+		printSeverity = SeverityInfo
+	}
+	l.printSeverity = printSeverity
+	l.mu.Unlock()
+}
+
+// SetStackTraceSeverity sets the Logger's severity level which allows printing stack trace.
+// If stackTraceSeverity is invalid, it sets SeverityNone. By default, SeverityNone.
+func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) {
+	l.mu.Lock()
+	if !stackTraceSeverity.IsValid() {
+		stackTraceSeverity = SeverityNone
+	}
+	l.stackTraceSeverity = stackTraceSeverity
+	l.mu.Unlock()
+}
+
 // WithTime clones the Logger with given time.
 func (l *Logger) WithTime(tm time.Time) *Logger {
 	ln := l.clone()
@@ -200,10 +244,29 @@ func (l *Logger) WithTime(tm time.Time) *Logger {
 }
 
 // WithFields clones the Logger with given fields.
-func (l *Logger) WithFields(fields Fields) *Logger {
+func (l *Logger) WithFields(fields ...Field) *Logger {
 	ln := l.clone()
-	for key, val := range ln.fields {
-		ln.fields[key] = val
-	}
+	ln.fields = append(ln.fields, fields...)
 	return ln
+}
+
+// WithFieldKeyVals clones the Logger with given key and values of Field.
+func (l *Logger) WithFieldKeyVals(kvs ...interface{}) *Logger {
+	n := len(kvs)/2
+	fields := make(Fields, 0, n)
+	for i := 0; i < n; i++ {
+		j := i*2
+		k, v := fmt.Sprintf("%v", kvs[j]) , kvs[j+1]
+		fields = append(fields, Field{Key: k, Val: v})
+	}
+	return l.WithFields(fields...)
+}
+
+// WithFieldMap clones the Logger with given fieldMap.
+func (l *Logger) WithFieldMap(fieldMap map[string]interface{}) *Logger {
+	fields := make(Fields, 0, len(fieldMap))
+	for k, v := range fieldMap {
+		fields = append(fields, Field{Key: k, Val: v})
+	}
+	return l.WithFields(fields...)
 }
