@@ -13,7 +13,7 @@ import (
 )
 
 // Verbose is type of verbose level.
-type Verbose uint16
+type Verbose int
 
 // Field is type of field.
 type Field struct {
