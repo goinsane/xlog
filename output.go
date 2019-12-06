@@ -358,28 +358,17 @@ func (t *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 
 // SetWriter sets output writer.
 func (t *TextOutput) SetWriter(w io.Writer) {
-	var err error
-	defer func() {
-		if err == nil || t.onError == nil || *t.onError == nil {
-			return
-		}
-		(*t.onError)(err)
-	}()
-
 	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	err = t.bw.Flush()
-
 	t.w = w
 	t.bw = bufio.NewWriter(w)
+	t.mu.Unlock()
 }
 
 // SetFlags sets output flags.
 func (t *TextOutput) SetFlags(flags OutputFlag) {
 	t.mu.Lock()
-	defer t.mu.Unlock()
 	t.flags = flags
+	t.mu.Unlock()
 }
 
 // RegisterOnError registers OnError function to use when error occured.

@@ -12,6 +12,7 @@ import (
 type Logger struct {
 	mu                 sync.RWMutex
 	out                Output
+	prefix             string
 	severity           Severity
 	verbose            Verbose
 	verbosity          Verbose
@@ -28,6 +29,7 @@ func New(out Output, severity Severity, verbose Verbose) *Logger {
 	}
 	return &Logger{
 		out:                out,
+		prefix:             "",
 		severity:           severity,
 		verbose:            verbose,
 		verbosity:          0,
@@ -40,6 +42,7 @@ func (l *Logger) clone() *Logger {
 	l.mu.RLock()
 	ln := &Logger{
 		out:                l.out,
+		prefix:             l.prefix,
 		severity:           l.severity,
 		verbose:            l.verbose,
 		verbosity:          l.verbosity,
@@ -58,8 +61,13 @@ func (l *Logger) output(severity Severity, message string) {
 	}
 	l.mu.RLock()
 	if l.out != nil && l.severity >= severity && l.verbose >= l.verbosity {
-		messageLen := len(message)
+		prefix := l.prefix
+		if prefix != "" {
+			prefix += ": "
+		}
+		messageLen := len(message) + len(prefix)
 		buf := make([]byte, 0, messageLen+1)
+		buf = append(buf, prefix...)
 		buf = append(buf, message...)
 		if messageLen == 0 || message[messageLen-1] != '\n' {
 			buf = append(buf, '\n')
@@ -190,6 +198,13 @@ func (l *Logger) SetOutput(out Output) {
 	l.mu.Unlock()
 }
 
+// SetPrefix sets the Logger's prefix. By default, "".
+func (l *Logger) SetPrefix(prefix string) {
+	l.mu.Lock()
+	l.prefix = prefix
+	l.mu.Unlock()
+}
+
 // SetSeverity sets the Logger's severity. If severity is invalid, it sets SeverityInfo.
 func (l *Logger) SetSeverity(severity Severity) {
 	l.mu.Lock()
@@ -252,11 +267,11 @@ func (l *Logger) WithFields(fields ...Field) *Logger {
 
 // WithFieldKeyVals clones the Logger with given key and values of Field.
 func (l *Logger) WithFieldKeyVals(kvs ...interface{}) *Logger {
-	n := len(kvs)/2
+	n := len(kvs) / 2
 	fields := make(Fields, 0, n)
 	for i := 0; i < n; i++ {
-		j := i*2
-		k, v := fmt.Sprintf("%v", kvs[j]) , kvs[j+1]
+		j := i * 2
+		k, v := fmt.Sprintf("%v", kvs[j]), kvs[j+1]
 		fields = append(fields, Field{Key: k, Val: v})
 	}
 	return l.WithFields(fields...)
