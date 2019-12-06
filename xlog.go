@@ -225,6 +225,11 @@ func SetOutput(out Output) {
 	defLogger.SetOutput(out)
 }
 
+// SetPrefix sets the default logger's prefix. By default, "".
+func SetPrefix(prefix string) {
+	defLogger.SetPrefix(prefix)
+}
+
 // SetSeverity sets the default logger's severity. If severity is invalid, it sets SeverityInfo.
 // By default, SeverityInfo.
 func SetSeverity(severity Severity) {
