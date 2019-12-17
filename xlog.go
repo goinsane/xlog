@@ -225,11 +225,6 @@ func SetOutput(out Output) {
 	defLogger.SetOutput(out)
 }
 
-// SetPrefix sets the default logger's prefix. By default, "".
-func SetPrefix(prefix string) {
-	defLogger.SetPrefix(prefix)
-}
-
 // SetSeverity sets the default logger's severity. If severity is invalid, it sets SeverityInfo.
 // By default, SeverityInfo.
 func SetSeverity(severity Severity) {
@@ -239,11 +234,6 @@ func SetSeverity(severity Severity) {
 // SetVerbose sets the default logger's verbose. By default, 0.
 func SetVerbose(verbose Verbose) {
 	defLogger.SetVerbose(verbose)
-}
-
-// V clones the default logger with given verbosity.
-func V(verbosity Verbose) *Logger {
-	return defLogger.V(verbosity)
 }
 
 // SetPrintSeverity sets the default logger's severity level which is using with Print functions.
@@ -256,6 +246,16 @@ func SetPrintSeverity(printSeverity Severity) {
 // If stackTraceSeverity is invalid, it sets SeverityNone. By default, SeverityNone.
 func SetStackTraceSeverity(stackTraceSeverity Severity) {
 	defLogger.SetStackTraceSeverity(stackTraceSeverity)
+}
+
+// V clones the default logger if Logger's verbose is greater or equal than given verbosity. Otherwise returns nil.
+func V(verbosity Verbose) *Logger {
+	return defLogger.V(verbosity)
+}
+
+// WithPrefix clones default Logger with given prefix.
+func WithPrefix(prefix string) {
+	defLogger.WithPrefix(prefix)
 }
 
 // WithTime clones the default logger with given time.
