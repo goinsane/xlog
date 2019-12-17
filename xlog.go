@@ -254,8 +254,8 @@ func V(verbosity Verbose) *Logger {
 }
 
 // WithPrefix clones default Logger with given prefix.
-func WithPrefix(prefix string) {
-	defLogger.WithPrefix(prefix)
+func WithPrefix(prefix string) *Logger {
+	return defLogger.WithPrefix(prefix)
 }
 
 // WithTime clones the default logger with given time.
