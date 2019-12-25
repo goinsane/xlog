@@ -36,10 +36,10 @@ func ExampleLogger() {
 	logger.Debug("this is debug log, verbosity 0. it will not be shown.")
 
 	// Output:
-	// INFO: this is info log, verbosity 0.
-	// WARNING: this is warning log, verbosity 0.
-	// WARNING: this is warning log, verbosity 1.
-	// ERROR: this is error log, verbosity 2.
+	// INFO - this is info log, verbosity 0.
+	// WARNING - this is warning log, verbosity 0.
+	// WARNING - this is warning log, verbosity 1.
+	// ERROR - this is error log, verbosity 2.
 }
 
 func ExampleTextOutput() {
@@ -54,10 +54,10 @@ func ExampleTextOutput() {
 	logger.Debug("this is debug log, verbosity 0. it will not be shown.")
 
 	// Output:
-	// INFO: this is info log, verbosity 0.
-	// WARNING: this is warning log, verbosity 0.
-	// WARNING: this is warning log, verbosity 1.
-	// ERROR: this is error log, verbosity 2.
+	// INFO - this is info log, verbosity 0.
+	// WARNING - this is warning log, verbosity 0.
+	// WARNING - this is warning log, verbosity 1.
+	// ERROR - this is error log, verbosity 2.
 }
 
 func ExamplePkg() {
@@ -94,18 +94,18 @@ func ExamplePkg() {
 	xlog.WithTime(tm).Info("this is info log, verbosity 0.")
 
 	// Output:
-	// INFO: this is info log, verbosity 0.
-	// INFO: this is info log, verbosity 0 caused by Print().
-	// WARNING: this is warning log,
+	// INFO - this is info log, verbosity 0.
+	// INFO - this is info log, verbosity 0 caused by Print().
+	// WARNING - this is warning log,
 	// verbosity 0.
-	// DEBUG: this is debug log, verbosity 0.
-	// INFO: this is info log, verbosity 0.
-	// INFO: this is info log, verbosity 1.
-	// WARNING: this is warning log, verbosity 0 caused by Print().
-	// ERROR: this is error log,
-	//        verbosity 0.
-	// WARNING: this is warning log,
-	//          verbosity 0 with fields.
-	// 	Fields: key1="val1" key2="val2" key2="val2-2" key3="val3"
-	// 2019/11/13 21:56:24 INFO: this is info log, verbosity 0.
+	// DEBUG - this is debug log, verbosity 0.
+	// INFO - this is info log, verbosity 0.
+	// INFO - this is info log, verbosity 1.
+	// WARNING - this is warning log, verbosity 0 caused by Print().
+	// ERROR - this is error log,
+	//         verbosity 0.
+	// WARNING - this is warning log,
+	//           verbosity 0 with fields.
+	// 	key1="val1" key2="val2" key2="val2-2" key3="val3"
+	// 2019/11/13 21:56:24 INFO - this is info log, verbosity 0.
 }

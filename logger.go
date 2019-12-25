@@ -74,12 +74,13 @@ func (l *Logger) output(severity Severity, message string) {
 		if tm.IsZero() {
 			tm = time.Now()
 		}
+		caller, _, _, _ := runtime.Caller(3)
 		callers := Callers(nil)
 		if l.stackTraceSeverity >= severity {
 			callers = make(Callers, 32)
 			callers = callers[:runtime.Callers(4, callers)]
 		}
-		l.out.Log(buf, severity, l.verbosity, tm, l.fields.Clone(), callers)
+		l.out.Log(buf, severity, l.verbosity, tm, caller, l.fields.Clone(), callers)
 	}
 	l.mu.RUnlock()
 }

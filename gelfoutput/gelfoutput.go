@@ -3,12 +3,17 @@ package gelfoutput
 
 import (
 	"context"
+	"go/build"
 	"os"
+	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/goinsane/xlog"
 	"gopkg.in/Graylog2/go-gelf.v2/gelf"
+
+	"github.com/goinsane/xlog"
 )
 
 // GelfWriterType defines type of GELF writer.
@@ -102,7 +107,7 @@ func (o *GelfOutput) Close() {
 }
 
 // Log is implementation of Output interface.
-func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbose, tm time.Time, fields xlog.Fields, callers xlog.Callers) {
+func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbose, tm time.Time, caller uintptr, fields xlog.Fields, callers xlog.Callers) {
 	select {
 	case <-o.ctx.Done():
 		return
@@ -136,8 +141,16 @@ func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbos
 		Extra:    make(map[string]interface{}),
 	}
 	m.Extra["severity"] = severity.String()
+	if f := runtime.FuncForPC(caller); f != nil {
+		file, line := f.FileLine(caller)
+		file = trimSrcpath(file)
+		fn := f.Name()
+		m.Extra["file"] = file
+		m.Extra["line"] = strconv.FormatInt(int64(line), 10)
+		m.Extra["func"] = fn + "()"
+	}
 	if callers != nil {
-		m.Extra["stacktrace"] = string(xlog.CallersToStackTrace(callers, nil))
+		m.Extra["stacktrace"] = string(callers.ToStackTrace(nil))
 	}
 	for i := range fields {
 		field := &fields[i]
@@ -181,4 +194,17 @@ func (o *GelfOutput) writeMessage(m *gelf.Message) {
 		}
 		return
 	}
+}
+
+func trimSrcpath(s string) string {
+	var r string
+	r = strings.TrimPrefix(s, build.Default.GOROOT+"/src/")
+	if r != s {
+		return r
+	}
+	r = strings.TrimPrefix(s, build.Default.GOPATH+"/src/")
+	if r != s {
+		return r
+	}
+	return s
 }
