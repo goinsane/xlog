@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -18,16 +17,16 @@ import (
 // Output is an interface for Logger output. All of Output implementations must be
 // concurrent-safe.
 type Output interface {
-	Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers)
+	Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, caller uintptr, fields Fields, callers Callers)
 }
 
 type multiOutput []Output
 
-func (m multiOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
+func (m multiOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, caller uintptr, fields Fields, callers Callers) {
 	for _, o := range m {
 		newmsg := make([]byte, len(msg))
 		copy(newmsg, msg)
-		o.Log(newmsg, severity, verbose, tm, fields.Clone(), callers.Clone())
+		o.Log(newmsg, severity, verbose, tm, caller, fields.Clone(), callers.Clone())
 	}
 }
 
@@ -40,8 +39,8 @@ func MultiOutput(outputs ...Output) Output {
 
 type asyncOutput struct{ Output }
 
-func (a *asyncOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
-	go a.Output.Log(msg, severity, verbose, tm, fields, callers)
+func (a *asyncOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, caller uintptr, fields Fields, callers Callers) {
+	go a.Output.Log(msg, severity, verbose, tm, caller, fields, callers)
 }
 
 // AsyncOutput creates a output that doesn't blocks its logs to the provided output.
@@ -54,6 +53,7 @@ type logRecord struct {
 	severity Severity
 	verbose  Verbose
 	tm       time.Time
+	caller   uintptr
 	fields   Fields
 	callers  Callers
 }
@@ -92,7 +92,7 @@ func (q *QueuedOutput) Close() {
 // If blocking is true, Log method blocks execution until underlying output has finished execution.
 // Otherwise, Log method sends log to queue if queue is available. When queue is full, it tries to call OnQueueFull
 // function.
-func (q *QueuedOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
+func (q *QueuedOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, caller uintptr, fields Fields, callers Callers) {
 	select {
 	case <-q.ctx.Done():
 		return
@@ -103,6 +103,7 @@ func (q *QueuedOutput) Log(msg []byte, severity Severity, verbose Verbose, tm ti
 		severity: severity,
 		verbose:  verbose,
 		tm:       tm,
+		caller:   caller,
 		fields:   fields,
 		callers:  callers,
 	}
@@ -154,7 +155,7 @@ func (q *QueuedOutput) worker() {
 			done = true
 		case r := <-q.queue:
 			if q.output != nil {
-				q.output.Log(r.msg, r.severity, r.verbose, r.tm, r.fields, r.callers)
+				q.output.Log(r.msg, r.severity, r.verbose, r.tm, r.caller, r.fields, r.callers)
 			}
 		}
 	}
@@ -182,14 +183,20 @@ const (
 	// OutputFlagPadding prints padding with multiple lines
 	OutputFlagPadding
 
-	// OutputFlagFields prints fields
-	OutputFlagFields
-
-	// OutputFlagLongFile prints full file name and line number: /a/b/c/d.go:23
+	// OutputFlagLongFile prints full file name and line number: a/b/c/d.go:23
 	OutputFlagLongFile
 
 	// OutputFlagShortFile prints final file name element and line number: d.go:23
 	OutputFlagShortFile
+
+	// OutputFlagLongFunc prints full package name and function name: a/b/c/d.Func1()
+	OutputFlagLongFunc
+
+	// OutputFlagShortFunc prints final package name and function name: d.Func1()
+	OutputFlagShortFunc
+
+	// OutputFlagFields prints fields
+	OutputFlagFields
 
 	// OutputFlagStackTrace prints stack trace
 	OutputFlagStackTrace
@@ -217,7 +224,7 @@ func NewTextOutput(w io.Writer, flags OutputFlag) *TextOutput {
 }
 
 // Log implementes Output.Log
-func (t *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, fields Fields, callers Callers) {
+func (t *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time.Time, caller uintptr, fields Fields, callers Callers) {
 	var err error
 	defer func() {
 		if err == nil || t.onError == nil || *t.onError == nil {
@@ -269,7 +276,7 @@ func (t *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 	}
 	if t.flags&OutputFlagSeverity != 0 {
 		buf = append(buf, severity.String()...)
-		buf = append(buf, ": "...)
+		buf = append(buf, " - "...)
 	}
 	if t.flags&OutputFlagPadding != 0 {
 		padLen = len(buf)
@@ -280,6 +287,26 @@ func (t *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 	}
 
 	padding := strings.Repeat(" ", padLen)
+
+	if t.flags&(OutputFlagLongFile|OutputFlagShortFile) != 0 {
+		buf = buf[:0]
+		pcToFile(&buf, caller, t.flags&OutputFlagShortFile != 0)
+		buf = append(buf, " - "...)
+		_, err = t.bw.Write(buf)
+		if err != nil {
+			return
+		}
+	}
+
+	if t.flags&(OutputFlagLongFunc|OutputFlagShortFunc) != 0 {
+		buf = buf[:0]
+		pcToFunc(&buf, caller, t.flags&OutputFlagShortFunc != 0)
+		buf = append(buf, " - "...)
+		_, err = t.bw.Write(buf)
+		if err != nil {
+			return
+		}
+	}
 
 	for i := 0; len(msg) > 0; i++ {
 		if i > 0 {
@@ -302,10 +329,11 @@ func (t *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 		msg = msg[idx:]
 	}
 
-	if len(fields) > 0 && t.flags&OutputFlagFields != 0 {
+	if t.flags&OutputFlagFields != 0 && len(fields) > 0 {
 		sort.Sort(fields)
 		buf = buf[:0]
-		buf = append(buf, "\tFields: "...)
+		//buf = append(buf, "\tFields: "...)
+		buf = append(buf, "\t"...)
 		for _, f := range fields {
 			buf = append(buf, fmt.Sprintf("%s=%q ", f.Key, fmt.Sprintf("%v", f.Val))...)
 		}
@@ -316,42 +344,12 @@ func (t *TextOutput) Log(msg []byte, severity Severity, verbose Verbose, tm time
 		}
 	}
 
-	if len(callers) > 0 {
-		if t.flags&(OutputFlagLongFile|OutputFlagShortFile) != 0 {
-			buf = buf[:0]
-			buf = append(buf, "\tFile: "...)
-			file, line := "???", 0
-			f := runtime.FuncForPC(callers[0])
-			if f != nil {
-				file, line = f.FileLine(callers[0])
-				file = trimSrcpath(file)
-			}
-			if t.flags&OutputFlagShortFile != 0 {
-				short := file
-				for i := len(file) - 1; i > 0; i-- {
-					if file[i] == '/' {
-						short = file[i+1:]
-						break
-					}
-				}
-				file = short
-			}
-			buf = append(buf, file...)
-			buf = append(buf, ':')
-			itoa(&buf, line, -1)
-			buf = append(buf, '\n')
-			_, err = t.bw.Write(buf)
-			if err != nil {
-				return
-			}
-		}
-		if t.flags&OutputFlagStackTrace != 0 {
-			buf = buf[:0]
-			buf = append(buf, CallersToStackTrace(callers, []byte("\t"))...)
-			_, err = t.bw.Write(buf)
-			if err != nil {
-				return
-			}
+	if t.flags&OutputFlagStackTrace != 0 && len(callers) > 0 {
+		buf = buf[:0]
+		buf = append(buf, callers.ToStackTrace([]byte("\t"))...)
+		_, err = t.bw.Write(buf)
+		if err != nil {
+			return
 		}
 	}
 }

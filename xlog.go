@@ -65,6 +65,23 @@ func (c Callers) Clone() Callers {
 	return result
 }
 
+// ToStackTrace generates stack trace output from stack callers.
+func (c Callers) ToStackTrace(padding []byte) []byte {
+	frames := runtime.CallersFrames(c)
+	buf := bytes.NewBuffer(make([]byte, 0, 128))
+	for {
+		frame, more := frames.Next()
+		buf.Write(padding)
+		buf.WriteString(fmt.Sprintf("%s()\n", frame.Function))
+		buf.Write(padding)
+		buf.WriteString(fmt.Sprintf("\t%s:%d\n", trimSrcpath(frame.File), frame.Line))
+		if !more {
+			break
+		}
+	}
+	return buf.Bytes()
+}
+
 var (
 	defLogger *Logger     = New(defOutput, SeverityInfo, 0)
 	defOutput *TextOutput = NewTextOutput(os.Stdout, OutputFlagDefault)
@@ -97,24 +114,40 @@ func trimSrcpath(s string) string {
 	return s
 }
 
-// CallersToStackTrace generates stack trace output from stack callers.
-func CallersToStackTrace(callers Callers, padding []byte) []byte {
-	if callers == nil {
-		return nil
-	}
-	frames := runtime.CallersFrames(callers)
-	buf := bytes.NewBuffer(make([]byte, 0, 128))
-	for {
-		frame, more := frames.Next()
-		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("%s\n", frame.Function))
-		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("\t%s:%d\n", trimSrcpath(frame.File), frame.Line))
-		if !more {
-			break
+func trimDirs(s string) string {
+	for i := len(s) - 1; i > 0; i-- {
+		if s[i] == '/' {
+			return s[i+1:]
 		}
 	}
-	return buf.Bytes()
+	return s
+}
+
+func pcToFile(buf *[]byte, pc uintptr, short bool) {
+	file, line := "???", 0
+	if f := runtime.FuncForPC(pc); f != nil {
+		file, line = f.FileLine(pc)
+		file = trimSrcpath(file)
+	}
+	if short {
+		file = trimDirs(file)
+	}
+	*buf = append(*buf, file...)
+	*buf = append(*buf, ':')
+	itoa(buf, line, -1)
+}
+
+func pcToFunc(buf *[]byte, pc uintptr, short bool) {
+	fn := "???"
+	if f := runtime.FuncForPC(pc); f != nil {
+		fn = f.Name()
+		fn = trimSrcpath(fn)
+	}
+	if short {
+		fn = trimDirs(fn)
+	}
+	*buf = append(*buf, fn...)
+	*buf = append(*buf, "()"...)
 }
 
 // DefaultLogger returns the default logger.
