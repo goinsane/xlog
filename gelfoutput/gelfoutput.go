@@ -3,9 +3,7 @@ package gelfoutput
 
 import (
 	"context"
-	"go/build"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -184,17 +182,4 @@ func (o *GelfOutput) writeMessage(m *gelf.Message) {
 		}
 		return
 	}
-}
-
-func trimSrcpath(s string) string {
-	var r string
-	r = strings.TrimPrefix(s, build.Default.GOROOT+"/src/")
-	if r != s {
-		return r
-	}
-	r = strings.TrimPrefix(s, build.Default.GOPATH+"/src/")
-	if r != s {
-		return r
-	}
-	return s
 }
