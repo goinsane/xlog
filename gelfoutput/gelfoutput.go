@@ -3,11 +3,7 @@ package gelfoutput
 
 import (
 	"context"
-	"go/build"
 	"os"
-	"runtime"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -107,18 +103,14 @@ func (o *GelfOutput) Close() {
 }
 
 // Log is implementation of Output interface.
-func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbose, tm time.Time, caller uintptr, fields xlog.Fields, callers xlog.Callers) {
+func (o *GelfOutput) Log(msg *xlog.Message) {
 	select {
 	case <-o.ctx.Done():
 		return
 	default:
 	}
-	tm2 := tm
-	if tm2.IsZero() {
-		tm2 = time.Now()
-	}
 	level := int32(gelf.LOG_EMERG)
-	switch severity {
+	switch msg.Severity {
 	case xlog.SeverityFatal:
 		level = gelf.LOG_CRIT
 	case xlog.SeverityError:
@@ -133,27 +125,23 @@ func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbos
 	m := &gelf.Message{
 		Version:  "1.1",
 		Host:     o.opts.Host,
-		Short:    string(msg),
+		Short:    string(msg.Msg),
 		Full:     "",
-		TimeUnix: float64(tm2.UnixNano()) / float64(time.Second),
+		TimeUnix: float64(msg.Tm.UnixNano()) / float64(time.Second),
 		Level:    level,
 		Facility: o.opts.Facility,
 		Extra:    make(map[string]interface{}),
 	}
-	m.Extra["severity"] = severity.String()
-	if f := runtime.FuncForPC(caller); f != nil {
-		file, line := f.FileLine(caller)
-		file = trimSrcpath(file)
-		fn := f.Name()
-		m.Extra["file"] = file
-		m.Extra["line"] = strconv.FormatInt(int64(line), 10)
-		m.Extra["func"] = fn + "()"
+	m.Extra["severity"] = msg.Severity.String()
+	m.Extra["verbosity"] = msg.Verbosity
+	m.Extra["file"] = msg.File
+	m.Extra["line"] = msg.Line
+	m.Extra["func"] = msg.Func
+	if msg.Callers != nil {
+		m.Extra["stacktrace"] = string(msg.Callers.ToStackTrace(nil))
 	}
-	if callers != nil {
-		m.Extra["stacktrace"] = string(callers.ToStackTrace(nil))
-	}
-	for i := range fields {
-		field := &fields[i]
+	for i := range msg.Fields {
+		field := &msg.Fields[i]
 		key := "_" + field.Key
 		/*for {
 			_, ok := m.Extra[key]
@@ -194,17 +182,4 @@ func (o *GelfOutput) writeMessage(m *gelf.Message) {
 		}
 		return
 	}
-}
-
-func trimSrcpath(s string) string {
-	var r string
-	r = strings.TrimPrefix(s, build.Default.GOROOT+"/src/")
-	if r != s {
-		return r
-	}
-	r = strings.TrimPrefix(s, build.Default.GOPATH+"/src/")
-	if r != s {
-		return r
-	}
-	return s
 }
