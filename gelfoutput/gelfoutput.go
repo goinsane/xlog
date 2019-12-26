@@ -145,6 +145,7 @@ func (o *GelfOutput) Log(msg []byte, severity xlog.Severity, verbose xlog.Verbos
 		file, line := f.FileLine(caller)
 		file = trimSrcpath(file)
 		fn := f.Name()
+		fn = trimSrcpath(fn)
 		m.Extra["file"] = file
 		m.Extra["line"] = strconv.FormatInt(int64(line), 10)
 		m.Extra["func"] = fn + "()"
