@@ -8,6 +8,34 @@ import (
 	"time"
 )
 
+// Message carries log message.
+type Message struct {
+	Msg       []byte
+	Severity  Severity
+	Verbosity Verbose
+	Tm        time.Time
+	Caller    uintptr
+	Func      string
+	File      string
+	Line      int
+	Fields    Fields
+	Callers   Callers
+}
+
+// Clone clones Message.
+func (msg *Message) Clone() *Message {
+	if msg == nil {
+		return nil
+	}
+	result := &Message{}
+	*result = *msg
+	result.Msg = make([]byte, len(msg.Msg))
+	copy(result.Msg, msg.Msg)
+	result.Fields = msg.Fields.Clone()
+	result.Callers = msg.Callers.Clone()
+	return result
+}
+
 // Logger provides a logger for leveled and structured logging.
 type Logger struct {
 	mu                 sync.RWMutex
@@ -59,28 +87,36 @@ func (l *Logger) output(severity Severity, message string) {
 	}
 	l.mu.RLock()
 	if l.out != nil && l.severity >= severity && l.verbose >= l.verbosity {
+		msg := &Message{}
 		prefix := l.prefix
 		if prefix != "" {
 			prefix += ": "
 		}
 		messageLen := len(prefix) + len(message)
-		buf := make([]byte, 0, messageLen+1)
-		buf = append(buf, prefix...)
-		buf = append(buf, message...)
+		msg.Msg = make([]byte, 0, messageLen+1)
+		msg.Msg = append(msg.Msg, prefix...)
+		msg.Msg = append(msg.Msg, message...)
 		if messageLen == 0 || message[messageLen-1] != '\n' {
-			buf = append(buf, '\n')
+			msg.Msg = append(msg.Msg, '\n')
 		}
-		tm := l.tm
-		if tm.IsZero() {
-			tm = time.Now()
+		msg.Severity = severity
+		msg.Verbosity = l.verbosity
+		msg.Tm = l.tm
+		if msg.Tm.IsZero() {
+			msg.Tm = time.Now()
 		}
-		caller, _, _, _ := runtime.Caller(3)
-		callers := Callers(nil)
+		msg.Caller, _, _, _ = runtime.Caller(3)
+		if f := runtime.FuncForPC(msg.Caller); f != nil {
+			msg.Func = trimSrcpath(f.Name())
+			msg.File, msg.Line = f.FileLine(msg.Caller)
+			msg.File = trimSrcpath(msg.File)
+		}
+		msg.Fields = l.fields.Clone()
 		if l.stackTraceSeverity >= severity {
-			callers = make(Callers, 32)
-			callers = callers[:runtime.Callers(4, callers)]
+			msg.Callers = make(Callers, 32)
+			msg.Callers = msg.Callers[:runtime.Callers(4, msg.Callers)]
 		}
-		l.out.Log(buf, severity, l.verbosity, tm, caller, l.fields.Clone(), callers)
+		l.out.Log(msg)
 	}
 	l.mu.RUnlock()
 }
