@@ -16,10 +16,37 @@ func BenchmarkLogger(b *testing.B) {
 	}
 }
 
-func BenchmarkLoggerWithStackTrace(b *testing.B) {
+func BenchmarkLoggerStackTrace(b *testing.B) {
 	output := xlog.NewTextOutput(ioutil.Discard, xlog.OutputFlagDefault)
 	logger := xlog.New(output, xlog.SeverityInfo, 0)
 	logger.SetStackTraceSeverity(xlog.SeverityInfo)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		logger.Info("benchmark")
+	}
+}
+
+func BenchmarkLoggerV(b *testing.B) {
+	output := xlog.NewTextOutput(ioutil.Discard, xlog.OutputFlagDefault)
+	logger := xlog.New(output, xlog.SeverityInfo, 5)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		logger.V(1).Info("benchmark")
+	}
+}
+
+func BenchmarkOutputFlagShortFunc(b *testing.B) {
+	output := xlog.NewTextOutput(ioutil.Discard, xlog.OutputFlagDefault | xlog.OutputFlagShortFunc)
+	logger := xlog.New(output, xlog.SeverityInfo, 0)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		logger.Info("benchmark")
+	}
+}
+
+func BenchmarkOutputFlagShortFile(b *testing.B) {
+	output := xlog.NewTextOutput(ioutil.Discard, xlog.OutputFlagDefault | xlog.OutputFlagShortFile)
+	logger := xlog.New(output, xlog.SeverityInfo, 0)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		logger.Info("benchmark")
