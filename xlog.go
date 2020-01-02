@@ -72,7 +72,7 @@ func (c Callers) ToStackTrace(padding []byte) []byte {
 	for {
 		frame, more := frames.Next()
 		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("%s()\n", frame.Function))
+		buf.WriteString(fmt.Sprintf("%s()\n", trimSrcpath(frame.Function)))
 		buf.Write(padding)
 		buf.WriteString(fmt.Sprintf("\t%s:%d\n", trimSrcpath(frame.File), frame.Line))
 		if !more {
