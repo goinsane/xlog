@@ -259,9 +259,14 @@ func V(verbosity Verbose) *Logger {
 	return defLogger.V(verbosity)
 }
 
-// WithPrefix clones default Logger with given prefix.
-func WithPrefix(prefix string) *Logger {
-	return defLogger.WithPrefix(prefix)
+// WithPrefix clones the default Logger and adds given prefix to end of the underlying prefix.
+func WithPrefix(args ...interface{}) *Logger {
+	return defLogger.WithPrefix(args...)
+}
+
+// WithPrefixf clones the default Logger and adds given prefix to end of the underlying prefix.
+func WithPrefixf(format string, args ...interface{}) *Logger {
+	return defLogger.WithPrefixf(format, args...)
 }
 
 // WithTime clones the default logger with given time.
