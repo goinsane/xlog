@@ -294,6 +294,11 @@ func SetOutputFlags(flags OutputFlag) {
 	defOutput.SetFlags(flags)
 }
 
+// SetOutputPadding sets custom padding of the default output. If padding is empty-string, padding is filled by first line of log.
+func SetOutputPadding(padding string) {
+	defOutput.SetPadding(padding)
+}
+
 // Reset resets default logger and output options.
 func Reset() {
 	SetOutput(defOutput)

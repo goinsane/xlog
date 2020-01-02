@@ -190,6 +190,7 @@ type TextOutput struct {
 	w       io.Writer
 	bw      *bufio.Writer
 	flags   OutputFlag
+	padding string
 	onError *func(error)
 }
 
@@ -223,7 +224,6 @@ func (t *TextOutput) Log(msg *Message) {
 	}()
 
 	buf := make([]byte, 128)
-	padLen := 0
 
 	buf = buf[:0]
 	if t.flags&(OutputFlagDate|OutputFlagTime|OutputFlagMicroseconds) != 0 {
@@ -253,19 +253,25 @@ func (t *TextOutput) Log(msg *Message) {
 			buf = append(buf, ' ')
 		}
 	}
+
 	if t.flags&OutputFlagSeverity != 0 {
 		buf = append(buf, msg.Severity.String()...)
 		buf = append(buf, " - "...)
 	}
-	if t.flags&OutputFlagPadding != 0 {
-		padLen = len(buf)
-	}
+
 	_, err = t.bw.Write(buf)
 	if err != nil {
 		return
 	}
 
-	padding := strings.Repeat(" ", padLen)
+	padding := ""
+	if t.flags&OutputFlagPadding != 0 {
+		paddingLen := len(buf)
+		padding = t.padding
+		if padding == "" {
+			padding = strings.Repeat(" ", paddingLen)
+		}
+	}
 
 	if t.flags&(OutputFlagLongFunc|OutputFlagShortFunc) != 0 {
 		buf = buf[:0]
@@ -365,6 +371,13 @@ func (t *TextOutput) SetWriter(w io.Writer) {
 func (t *TextOutput) SetFlags(flags OutputFlag) {
 	t.mu.Lock()
 	t.flags = flags
+	t.mu.Unlock()
+}
+
+// SetPadding sets custom padding. If padding is empty-string, padding is filled by first line of log.
+func (t *TextOutput) SetPadding(padding string) {
+	t.mu.Lock()
+	t.padding = padding
 	t.mu.Unlock()
 }
 
