@@ -72,7 +72,7 @@ func (c Callers) ToStackTrace(padding []byte) []byte {
 	for {
 		frame, more := frames.Next()
 		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("%s()\n", frame.Function))
+		buf.WriteString(fmt.Sprintf("%s()\n", trimSrcpath(frame.Function)))
 		buf.Write(padding)
 		buf.WriteString(fmt.Sprintf("\t%s:%d\n", trimSrcpath(frame.File), frame.Line))
 		if !more {
@@ -259,9 +259,14 @@ func V(verbosity Verbose) *Logger {
 	return defLogger.V(verbosity)
 }
 
-// WithPrefix clones default Logger with given prefix.
-func WithPrefix(prefix string) *Logger {
-	return defLogger.WithPrefix(prefix)
+// WithPrefix clones the default Logger and adds given prefix to end of the underlying prefix.
+func WithPrefix(args ...interface{}) *Logger {
+	return defLogger.WithPrefix(args...)
+}
+
+// WithPrefixf clones the default Logger and adds given prefix to end of the underlying prefix.
+func WithPrefixf(format string, args ...interface{}) *Logger {
+	return defLogger.WithPrefixf(format, args...)
 }
 
 // WithTime clones the default logger with given time.
@@ -287,6 +292,11 @@ func SetOutputWriter(w io.Writer) {
 // SetOutputFlags sets the default output flags.
 func SetOutputFlags(flags OutputFlag) {
 	defOutput.SetFlags(flags)
+}
+
+// SetOutputPadding sets custom padding of the default output. If padding is empty-string, padding is filled by first line of log.
+func SetOutputPadding(padding string) {
+	defOutput.SetPadding(padding)
 }
 
 // Reset resets default logger and output options.

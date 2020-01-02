@@ -88,15 +88,11 @@ func (l *Logger) output(severity Severity, message string) {
 	l.mu.RLock()
 	if l.out != nil && l.severity >= severity && l.verbose >= l.verbosity {
 		msg := &Message{}
-		prefix := l.prefix
-		if prefix != "" {
-			prefix += ": "
-		}
-		messageLen := len(prefix) + len(message)
+		messageLen := len(l.prefix) + len(message)
 		msg.Msg = make([]byte, 0, messageLen+1)
-		msg.Msg = append(msg.Msg, prefix...)
+		msg.Msg = append(msg.Msg, l.prefix...)
 		msg.Msg = append(msg.Msg, message...)
-		if messageLen == 0 || message[messageLen-1] != '\n' {
+		if messageLen == 0 || msg.Msg[messageLen-1] != '\n' {
 			msg.Msg = append(msg.Msg, '\n')
 		}
 		msg.Severity = severity
@@ -300,13 +296,23 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	return ln
 }
 
-// WithPrefix clones the Logger with given prefix.
-func (l *Logger) WithPrefix(prefix string) *Logger {
+// WithPrefix clones the Logger and adds given prefix to end of the underlying prefix.
+func (l *Logger) WithPrefix(args ...interface{}) *Logger {
 	if l == nil {
 		return nil
 	}
 	ln := l.clone()
-	ln.prefix = prefix
+	ln.prefix += fmt.Sprint(args...) + ": "
+	return ln
+}
+
+// WithPrefixf clones the Logger and adds given prefix to end of the underlying prefix.
+func (l *Logger) WithPrefixf(format string, args ...interface{}) *Logger {
+	if l == nil {
+		return nil
+	}
+	ln := l.clone()
+	ln.prefix += fmt.Sprintf(format, args...) + ": "
 	return ln
 }
 
