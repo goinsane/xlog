@@ -209,16 +209,25 @@ func (l *Logger) Debugln(args ...interface{}) {
 
 // Print logs to logs has Logger's print severity.
 func (l *Logger) Print(args ...interface{}) {
+	if l == nil {
+		return
+	}
 	l.log(l.printSeverity, args...)
 }
 
 // Printf logs to logs has Logger's print severity.
 func (l *Logger) Printf(format string, args ...interface{}) {
+	if l == nil {
+		return
+	}
 	l.logf(l.printSeverity, format, args...)
 }
 
 // Println logs to logs has Logger's print severity.
 func (l *Logger) Println(args ...interface{}) {
+	if l == nil {
+		return
+	}
 	l.logln(l.printSeverity, args...)
 }
 
