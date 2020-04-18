@@ -84,7 +84,7 @@ func (c Callers) ToStackTrace(padding []byte) []byte {
 
 var (
 	defLogger *Logger     = New(defOutput, SeverityInfo, 0)
-	defOutput *TextOutput = NewTextOutput(os.Stdout, OutputFlagDefault)
+	defOutput *TextOutput = NewTextOutput(os.Stderr, OutputFlagDefault)
 )
 
 func itoa(buf *[]byte, i int, wid int) {
