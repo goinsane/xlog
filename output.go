@@ -24,7 +24,7 @@ type multiOutput []Output
 
 func (m multiOutput) Log(msg *Message) {
 	for _, o := range m {
-		o.Log(msg.Clone())
+		o.Log(msg.Duplicate())
 	}
 }
 

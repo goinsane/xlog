@@ -19,8 +19,8 @@ type Field struct {
 // Fields is type of fields.
 type Fields []Field
 
-// Clone clones Fields.
-func (f Fields) Clone() Fields {
+// Duplicate duplicates the Fields.
+func (f Fields) Duplicate() Fields {
 	if f == nil {
 		return nil
 	}

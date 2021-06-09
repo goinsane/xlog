@@ -22,8 +22,8 @@ type Message struct {
 	Callers   Callers
 }
 
-// Clone clones Message.
-func (msg *Message) Clone() *Message {
+// Duplicate duplicates the Message.
+func (msg *Message) Duplicate() *Message {
 	if msg == nil {
 		return nil
 	}
@@ -31,7 +31,7 @@ func (msg *Message) Clone() *Message {
 	*result = *msg
 	result.Msg = make([]byte, len(msg.Msg))
 	copy(result.Msg, msg.Msg)
-	result.Fields = msg.Fields.Clone()
+	result.Fields = msg.Fields.Duplicate()
 	result.Callers = msg.Callers.Clone()
 	return result
 }
@@ -64,7 +64,8 @@ func New(out Output, severity Severity, verbose Verbose) *Logger {
 	}
 }
 
-func (l *Logger) clone() *Logger {
+// Duplicate duplicates the Logger.
+func (l *Logger) Duplicate() *Logger {
 	l.mu.RLock()
 	ln := &Logger{
 		out:                l.out,
@@ -75,7 +76,7 @@ func (l *Logger) clone() *Logger {
 		prefix:             l.prefix,
 		verbosity:          l.verbosity,
 		tm:                 l.tm,
-		fields:             l.fields.Clone(),
+		fields:             l.fields.Duplicate(),
 	}
 	l.mu.RUnlock()
 	return ln
@@ -107,7 +108,7 @@ func (l *Logger) output(severity Severity, message string) {
 			msg.File, msg.Line = f.FileLine(msg.Caller)
 			msg.File = trimSrcPath(msg.File)
 		}
-		msg.Fields = l.fields.Clone()
+		msg.Fields = l.fields.Duplicate()
 		if l.stackTraceSeverity >= severity {
 			msg.Callers = make(Callers, 32)
 			msg.Callers = msg.Callers[:runtime.Callers(4, msg.Callers)]
@@ -300,7 +301,7 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	if !(l.verbose >= verbosity) {
 		return nil
 	}
-	ln := l.clone()
+	ln := l.Duplicate()
 	ln.verbosity = verbosity
 	return ln
 }
@@ -310,7 +311,7 @@ func (l *Logger) WithPrefix(args ...interface{}) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.clone()
+	ln := l.Duplicate()
 	ln.prefix += fmt.Sprint(args...) + ": "
 	return ln
 }
@@ -320,7 +321,7 @@ func (l *Logger) WithPrefixf(format string, args ...interface{}) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.clone()
+	ln := l.Duplicate()
 	ln.prefix += fmt.Sprintf(format, args...) + ": "
 	return ln
 }
@@ -330,7 +331,7 @@ func (l *Logger) WithTime(tm time.Time) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.clone()
+	ln := l.Duplicate()
 	ln.tm = tm
 	return ln
 }
@@ -340,7 +341,7 @@ func (l *Logger) WithFields(fields ...Field) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.clone()
+	ln := l.Duplicate()
 	ln.fields = append(ln.fields, fields...)
 	return ln
 }
