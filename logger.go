@@ -103,9 +103,9 @@ func (l *Logger) output(severity Severity, message string) {
 		}
 		msg.Caller, _, _, _ = runtime.Caller(3)
 		if f := runtime.FuncForPC(msg.Caller); f != nil {
-			msg.Func = trimSrcpath(f.Name())
+			msg.Func = trimSrcPath(f.Name())
 			msg.File, msg.Line = f.FileLine(msg.Caller)
-			msg.File = trimSrcpath(msg.File)
+			msg.File = trimSrcPath(msg.File)
 		}
 		msg.Fields = l.fields.Clone()
 		if l.stackTraceSeverity >= severity {

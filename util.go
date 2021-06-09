@@ -2,6 +2,7 @@ package xlog
 
 import (
 	"go/build"
+	"os"
 	"strings"
 )
 
@@ -19,7 +20,7 @@ func itoa(buf *[]byte, i int, wid int) {
 	*buf = append(*buf, b[bp:]...)
 }
 
-func trimSrcpath(s string) string {
+func trimSrcPath(s string) string {
 	var r string
 	r = strings.TrimPrefix(s, build.Default.GOROOT+"/src/")
 	if r != s {
@@ -34,7 +35,7 @@ func trimSrcpath(s string) string {
 
 func trimDirs(s string) string {
 	for i := len(s) - 1; i > 0; i-- {
-		if s[i] == '/' {
+		if s[i] == '/' || s[i] == os.PathSeparator {
 			return s[i+1:]
 		}
 	}

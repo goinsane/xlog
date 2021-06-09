@@ -4,7 +4,6 @@ package xlog
 import (
 	"bytes"
 	"fmt"
-	"go/build"
 	"io"
 	"os"
 	"runtime"
@@ -72,9 +71,9 @@ func (c Callers) ToStackTrace(padding []byte) []byte {
 	for {
 		frame, more := frames.Next()
 		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("%s()\n", trimSrcpath(frame.Function)))
+		buf.WriteString(fmt.Sprintf("%s()\n", trimSrcPath(frame.Function)))
 		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("\t%s:%d\n", trimSrcpath(frame.File), frame.Line))
+		buf.WriteString(fmt.Sprintf("\t%s:%d\n", trimSrcPath(frame.File), frame.Line))
 		if !more {
 			break
 		}
