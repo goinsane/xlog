@@ -3,32 +3,33 @@ package xlog
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"sync"
 	"time"
+
+	"github.com/goinsane/erf"
 )
 
 // Logger provides a logger for leveled and structured logging.
 type Logger struct {
 	mu                 sync.RWMutex
-	out                Output
+	output             Output
 	severity           Severity
 	verbose            Verbose
 	printSeverity      Severity
 	stackTraceSeverity Severity
 	prefix             string
 	verbosity          Verbose
-	tm                 time.Time
+	time               time.Time
 	fields             Fields
 }
 
 // New creates a new Logger. If severity is invalid, it sets SeverityInfo.
-func New(out Output, severity Severity, verbose Verbose) *Logger {
+func New(output Output, severity Severity, verbose Verbose) *Logger {
 	if !severity.IsValid() {
 		severity = SeverityInfo
 	}
 	return &Logger{
-		out:                out,
+		output:             output,
 		severity:           severity,
 		verbose:            verbose,
 		printSeverity:      SeverityInfo,
@@ -39,27 +40,27 @@ func New(out Output, severity Severity, verbose Verbose) *Logger {
 // Duplicate duplicates the Logger.
 func (l *Logger) Duplicate() *Logger {
 	l.mu.RLock()
-	ln := &Logger{
-		out:                l.out,
+	l2 := &Logger{
+		output:             l.output,
 		severity:           l.severity,
 		verbose:            l.verbose,
 		printSeverity:      l.printSeverity,
 		stackTraceSeverity: l.stackTraceSeverity,
 		prefix:             l.prefix,
 		verbosity:          l.verbosity,
-		tm:                 l.tm,
+		time:               l.time,
 		fields:             l.fields.Duplicate(),
 	}
 	l.mu.RUnlock()
-	return ln
+	return l2
 }
 
-func (l *Logger) output(severity Severity, message string) {
+func (l *Logger) out(severity Severity, message string) {
 	if l == nil {
 		return
 	}
 	l.mu.RLock()
-	if l.out != nil && l.severity >= severity && l.verbose >= l.verbosity {
+	if l.output != nil && l.severity >= severity && l.verbose >= l.verbosity {
 		msg := &Message{}
 		messageLen := len(l.prefix) + len(message)
 		msg.Msg = make([]byte, 0, messageLen+1)
@@ -70,36 +71,30 @@ func (l *Logger) output(severity Severity, message string) {
 		}
 		msg.Severity = severity
 		msg.Verbosity = l.verbosity
-		msg.Tm = l.tm
-		if msg.Tm.IsZero() {
-			msg.Tm = time.Now()
-		}
-		msg.Caller, _, _, _ = runtime.Caller(3)
-		if f := runtime.FuncForPC(msg.Caller); f != nil {
-			msg.Func = trimSrcPath(f.Name())
-			msg.File, msg.Line = f.FileLine(msg.Caller)
-			msg.File = trimSrcPath(msg.File)
+		msg.Time = l.time
+		if msg.Time.IsZero() {
+			msg.Time = time.Now()
 		}
 		msg.Fields = l.fields.Duplicate()
+		msg.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
 		if l.stackTraceSeverity >= severity {
-			msg.Callers = make(Callers, 32)
-			msg.Callers = msg.Callers[:runtime.Callers(4, msg.Callers)]
+			msg.StackTrace = erf.NewStackTrace(erf.PC(erf.DefaultPCSize, 5)...)
 		}
-		l.out.Log(msg)
+		l.output.Log(msg)
 	}
 	l.mu.RUnlock()
 }
 
 func (l *Logger) log(severity Severity, args ...interface{}) {
-	l.output(severity, fmt.Sprint(args...))
+	l.out(severity, fmt.Sprint(args...))
 }
 
 func (l *Logger) logf(severity Severity, format string, args ...interface{}) {
-	l.output(severity, fmt.Sprintf(format, args...))
+	l.out(severity, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) logln(severity Severity, args ...interface{}) {
-	l.output(severity, fmt.Sprintln(args...))
+	l.out(severity, fmt.Sprintln(args...))
 }
 
 // Fatal logs to the FATAL severity logs, then calls os.Exit(1).
@@ -205,12 +200,12 @@ func (l *Logger) Println(args ...interface{}) {
 }
 
 // SetOutput sets the Logger's output.
-func (l *Logger) SetOutput(out Output) {
+func (l *Logger) SetOutput(output Output) {
 	if l == nil {
 		return
 	}
 	l.mu.Lock()
-	l.out = out
+	l.output = output
 	l.mu.Unlock()
 }
 
@@ -304,7 +299,7 @@ func (l *Logger) WithTime(tm time.Time) *Logger {
 		return nil
 	}
 	ln := l.Duplicate()
-	ln.tm = tm
+	ln.time = tm
 	return ln
 }
 

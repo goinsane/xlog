@@ -228,10 +228,10 @@ func (t *TextOutput) Log(msg *Message) {
 	buf = buf[:0]
 	if t.flags&(OutputFlagDate|OutputFlagTime|OutputFlagMicroseconds) != 0 {
 		if t.flags&OutputFlagUTC != 0 {
-			msg.Tm = msg.Tm.UTC()
+			msg.Time = msg.Time.UTC()
 		}
 		if t.flags&OutputFlagDate != 0 {
-			year, month, day := msg.Tm.Date()
+			year, month, day := msg.Time.Date()
 			itoa(&buf, year, 4)
 			buf = append(buf, '/')
 			itoa(&buf, int(month), 2)
@@ -240,7 +240,7 @@ func (t *TextOutput) Log(msg *Message) {
 			buf = append(buf, ' ')
 		}
 		if t.flags&(OutputFlagTime|OutputFlagMicroseconds) != 0 {
-			hour, min, sec := msg.Tm.Clock()
+			hour, min, sec := msg.Time.Clock()
 			itoa(&buf, hour, 2)
 			buf = append(buf, ':')
 			itoa(&buf, min, 2)
@@ -248,7 +248,7 @@ func (t *TextOutput) Log(msg *Message) {
 			itoa(&buf, sec, 2)
 			if t.flags&OutputFlagMicroseconds != 0 {
 				buf = append(buf, '.')
-				itoa(&buf, msg.Tm.Nanosecond()/1e3, 6)
+				itoa(&buf, msg.Time.Nanosecond()/1e3, 6)
 			}
 			buf = append(buf, ' ')
 		}
@@ -276,8 +276,8 @@ func (t *TextOutput) Log(msg *Message) {
 	if t.flags&(OutputFlagLongFunc|OutputFlagShortFunc) != 0 {
 		buf = buf[:0]
 		fn := "???"
-		if msg.Func != "" {
-			fn = msg.Func
+		if msg.StackCaller.Function != "" {
+			fn = msg.StackCaller.Function
 		}
 		if t.flags&OutputFlagShortFunc != 0 {
 			fn = trimDirs(fn)
@@ -294,11 +294,11 @@ func (t *TextOutput) Log(msg *Message) {
 	if t.flags&(OutputFlagLongFile|OutputFlagShortFile) != 0 {
 		buf = buf[:0]
 		file, line := "???", 0
-		if msg.File != "" {
-			file = msg.File
+		if msg.StackCaller.File != "" {
+			file = msg.StackCaller.File
 		}
-		if msg.Line > 0 {
-			line = msg.Line
+		if msg.StackCaller.Line > 0 {
+			line = msg.StackCaller.Line
 		}
 		if t.flags&OutputFlagShortFile != 0 {
 			file = trimDirs(file)
@@ -349,9 +349,9 @@ func (t *TextOutput) Log(msg *Message) {
 		}
 	}
 
-	if t.flags&OutputFlagStackTrace != 0 && len(msg.Callers) > 0 {
+	if t.flags&OutputFlagStackTrace != 0 && msg.StackTrace != nil {
 		buf = buf[:0]
-		buf = append(buf, msg.Callers.ToStackTrace([]byte("\t"))...)
+		buf = append(buf, msg.StackTrace.String()...)
 		_, err = t.bw.Write(buf)
 		if err != nil {
 			return

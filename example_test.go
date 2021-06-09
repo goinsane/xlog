@@ -63,6 +63,7 @@ func ExampleTextOutput() {
 func ExamplePkg() {
 	// needing to reset previous example changes
 	xlog.Reset()
+	xlog.SetOutputWriter(os.Stdout)
 
 	// set output flags for testable results
 	xlog.SetOutputFlags(xlog.OutputFlagSeverity)

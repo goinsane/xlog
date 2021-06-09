@@ -116,8 +116,8 @@ func Println(args ...interface{}) {
 }
 
 // SetOutput sets the default logger's output. By default, the default output.
-func SetOutput(out Output) {
-	defLogger.SetOutput(out)
+func SetOutput(output Output) {
+	defLogger.SetOutput(output)
 }
 
 // SetSeverity sets the default logger's severity. If severity is invalid, it sets SeverityInfo.
