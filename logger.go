@@ -8,34 +8,6 @@ import (
 	"time"
 )
 
-// Message carries log message.
-type Message struct {
-	Msg       []byte
-	Severity  Severity
-	Verbosity Verbose
-	Tm        time.Time
-	Caller    uintptr
-	Func      string
-	File      string
-	Line      int
-	Fields    Fields
-	Callers   Callers
-}
-
-// Duplicate duplicates the Message.
-func (msg *Message) Duplicate() *Message {
-	if msg == nil {
-		return nil
-	}
-	result := &Message{}
-	*result = *msg
-	result.Msg = make([]byte, len(msg.Msg))
-	copy(result.Msg, msg.Msg)
-	result.Fields = msg.Fields.Duplicate()
-	result.Callers = msg.Callers.Clone()
-	return result
-}
-
 // Logger provides a logger for leveled and structured logging.
 type Logger struct {
 	mu                 sync.RWMutex

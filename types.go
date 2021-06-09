@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // Verbose is type of verbose level.
@@ -44,6 +45,34 @@ func (f Fields) Less(i, j int) bool {
 // Swap is implementation of sort.Interface
 func (f Fields) Swap(i, j int) {
 	f[i], f[j] = f[j], f[i]
+}
+
+// Message carries log message.
+type Message struct {
+	Msg       []byte
+	Severity  Severity
+	Verbosity Verbose
+	Tm        time.Time
+	Caller    uintptr
+	Func      string
+	File      string
+	Line      int
+	Fields    Fields
+	Callers   Callers
+}
+
+// Duplicate duplicates the Message.
+func (msg *Message) Duplicate() *Message {
+	if msg == nil {
+		return nil
+	}
+	result := &Message{}
+	*result = *msg
+	result.Msg = make([]byte, len(msg.Msg))
+	copy(result.Msg, msg.Msg)
+	result.Fields = msg.Fields.Duplicate()
+	result.Callers = msg.Callers.Clone()
+	return result
 }
 
 // Callers is a type of stack callers.
