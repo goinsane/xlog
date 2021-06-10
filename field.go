@@ -4,13 +4,10 @@ import (
 	"strings"
 )
 
-// Verbose is type of verbose level.
-type Verbose int
-
 // Field is type of field.
 type Field struct {
-	Key string
-	Val interface{}
+	Key   string
+	Value interface{}
 }
 
 // Fields is slice of fields.

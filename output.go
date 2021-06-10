@@ -2,29 +2,25 @@ package xlog
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"fmt"
 	"io"
-	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
 )
 
-// Output is an interface for Logger output. All of Output implementations must be
-// concurrent-safe.
+// Output is an interface for Logger output.
+// All of Output implementations must be safe for concurrency.
 type Output interface {
-	Log(msg *Log)
+	Log(log *Log)
 }
 
 type multiOutput []Output
 
-func (m multiOutput) Log(msg *Log) {
+func (m multiOutput) Log(log *Log) {
 	for _, o := range m {
-		o.Log(msg.Duplicate())
+		o.Log(log.Duplicate())
 	}
 }
 
@@ -37,8 +33,8 @@ func MultiOutput(outputs ...Output) Output {
 
 type asyncOutput struct{ Output }
 
-func (a *asyncOutput) Log(msg *Log) {
-	go a.Output.Log(msg)
+func (a *asyncOutput) Log(log *Log) {
+	go a.Output.Log(log)
 }
 
 // AsyncOutput creates a output that doesn't blocks its logs to the provided output.
@@ -49,10 +45,10 @@ func AsyncOutput(output Output) Output {
 // QueuedOutput is intermediate Output implementation between Logger and given Output.
 // QueuedOutput has queueing for unblocking Log() method.
 type QueuedOutput struct {
-	ctx         context.Context
-	ctxCancel   context.CancelFunc
 	output      Output
 	queue       chan *Log
+	ctx         context.Context
+	ctxCancel   context.CancelFunc
 	blocking    uint32
 	onQueueFull *func()
 }
@@ -76,22 +72,22 @@ func (q *QueuedOutput) Close() {
 	q.ctxCancel()
 }
 
-// Log is implementation of Output interface.
+// Log is implementation of Output.
 // If blocking is true, Log method blocks execution until underlying output has finished execution.
 // Otherwise, Log method sends log to queue if queue is available. When queue is full, it tries to call OnQueueFull
 // function.
-func (q *QueuedOutput) Log(msg *Log) {
+func (q *QueuedOutput) Log(log *Log) {
 	select {
 	case <-q.ctx.Done():
 		return
 	default:
 	}
 	if q.blocking != 0 {
-		q.queue <- msg
+		q.queue <- log
 		return
 	}
 	select {
-	case q.queue <- msg:
+	case q.queue <- log:
 	default:
 		if q.onQueueFull != nil && *q.onQueueFull != nil {
 			(*q.onQueueFull)()
@@ -140,62 +136,17 @@ func (q *QueuedOutput) worker() {
 	}
 }
 
-// OutputFlag is type of output flag.
-type OutputFlag int
-
-const (
-	// OutputFlagDate prints the date in the local time zone: 2009/01/23
-	OutputFlagDate = OutputFlag(1 << iota)
-
-	// OutputFlagTime prints the time in the local time zone: 01:23:23
-	OutputFlagTime
-
-	// OutputFlagMicroseconds prints microsecond resolution: 01:23:23.123123
-	OutputFlagMicroseconds
-
-	// OutputFlagUTC uses UTC rather than the local time zone
-	OutputFlagUTC
-
-	// OutputFlagSeverity prints severity level
-	OutputFlagSeverity
-
-	// OutputFlagPadding prints padding with multiple lines
-	OutputFlagPadding
-
-	// OutputFlagLongFunc prints full package name and function name: a/b/c/d.Func1()
-	OutputFlagLongFunc
-
-	// OutputFlagShortFunc prints final package name and function name: d.Func1()
-	OutputFlagShortFunc
-
-	// OutputFlagLongFile prints full file name and line number: a/b/c/d.go:23
-	OutputFlagLongFile
-
-	// OutputFlagShortFile prints final file name element and line number: d.go:23
-	OutputFlagShortFile
-
-	// OutputFlagFields prints fields
-	OutputFlagFields
-
-	// OutputFlagStackTrace prints stack trace
-	OutputFlagStackTrace
-
-	// OutputFlagDefault holds initial values for the default logger
-	OutputFlagDefault = OutputFlagDate | OutputFlagTime | OutputFlagSeverity | OutputFlagFields | OutputFlagStackTrace
-)
-
 // TextOutput is an implementation of Output by writing texts to io.Writer w.
 type TextOutput struct {
 	mu      sync.Mutex
 	w       io.Writer
 	bw      *bufio.Writer
-	flags   OutputFlag
-	padding string
+	flags   Flag
 	onError *func(error)
 }
 
 // NewTextOutput creates a new TextOutput.
-func NewTextOutput(w io.Writer, flags OutputFlag) *TextOutput {
+func NewTextOutput(w io.Writer, flags Flag) *TextOutput {
 	return &TextOutput{
 		w:     w,
 		bw:    bufio.NewWriter(w),
@@ -203,8 +154,8 @@ func NewTextOutput(w io.Writer, flags OutputFlag) *TextOutput {
 	}
 }
 
-// Log implementes Output.Log
-func (t *TextOutput) Log(msg *Log) {
+// Log is implementation of Output.
+func (t *TextOutput) Log(log *Log) {
 	var err error
 	defer func() {
 		if err == nil || t.onError == nil || *t.onError == nil {
@@ -223,162 +174,31 @@ func (t *TextOutput) Log(msg *Log) {
 		}
 	}()
 
-	buf := make([]byte, 128)
-
-	buf = buf[:0]
-	if t.flags&(OutputFlagDate|OutputFlagTime|OutputFlagMicroseconds) != 0 {
-		if t.flags&OutputFlagUTC != 0 {
-			msg.Time = msg.Time.UTC()
-		}
-		if t.flags&OutputFlagDate != 0 {
-			year, month, day := msg.Time.Date()
-			itoa(&buf, year, 4)
-			buf = append(buf, '/')
-			itoa(&buf, int(month), 2)
-			buf = append(buf, '/')
-			itoa(&buf, day, 2)
-			buf = append(buf, ' ')
-		}
-		if t.flags&(OutputFlagTime|OutputFlagMicroseconds) != 0 {
-			hour, min, sec := msg.Time.Clock()
-			itoa(&buf, hour, 2)
-			buf = append(buf, ':')
-			itoa(&buf, min, 2)
-			buf = append(buf, ':')
-			itoa(&buf, sec, 2)
-			if t.flags&OutputFlagMicroseconds != 0 {
-				buf = append(buf, '.')
-				itoa(&buf, msg.Time.Nanosecond()/1e3, 6)
-			}
-			buf = append(buf, ' ')
-		}
-	}
-
-	if t.flags&OutputFlagSeverity != 0 {
-		buf = append(buf, msg.Severity.String()...)
-		buf = append(buf, " - "...)
-	}
-
-	_, err = t.bw.Write(buf)
+	var text []byte
+	text, err = log.MarshalText()
 	if err != nil {
 		return
 	}
 
-	padding := ""
-	if t.flags&OutputFlagPadding != 0 {
-		paddingLen := len(buf)
-		padding = t.padding
-		if padding == "" {
-			padding = strings.Repeat(" ", paddingLen)
-		}
-	}
-
-	if t.flags&(OutputFlagLongFunc|OutputFlagShortFunc) != 0 {
-		buf = buf[:0]
-		fn := "???"
-		if msg.StackCaller.Function != "" {
-			fn = msg.StackCaller.Function
-		}
-		if t.flags&OutputFlagShortFunc != 0 {
-			fn = trimDirs(fn)
-		}
-		buf = append(buf, fn...)
-		buf = append(buf, "()"...)
-		buf = append(buf, " - "...)
-		_, err = t.bw.Write(buf)
-		if err != nil {
-			return
-		}
-	}
-
-	if t.flags&(OutputFlagLongFile|OutputFlagShortFile) != 0 {
-		buf = buf[:0]
-		file, line := "???", 0
-		if msg.StackCaller.File != "" {
-			file = msg.StackCaller.File
-		}
-		if msg.StackCaller.Line > 0 {
-			line = msg.StackCaller.Line
-		}
-		if t.flags&OutputFlagShortFile != 0 {
-			file = trimDirs(file)
-		}
-		buf = append(buf, file...)
-		buf = append(buf, ':')
-		itoa(&buf, line, -1)
-		buf = append(buf, " - "...)
-		_, err = t.bw.Write(buf)
-		if err != nil {
-			return
-		}
-	}
-
-	for i := 0; len(msg.Message) > 0; i++ {
-		if i > 0 {
-			_, err = t.bw.WriteString(padding)
-			if err != nil {
-				return
-			}
-		}
-		idx := bytes.IndexByte(msg.Message, '\n')
-		if idx < 0 {
-			msg.Message = append(msg.Message, '\n')
-			idx = len(msg.Message)
-		} else {
-			idx++
-		}
-		_, err = t.bw.Write(msg.Message[:idx])
-		if err != nil {
-			return
-		}
-		msg.Message = msg.Message[idx:]
-	}
-
-	if t.flags&OutputFlagFields != 0 && len(msg.Fields) > 0 {
-		sort.Sort(msg.Fields)
-		buf = buf[:0]
-		//buf = append(buf, "\tFields: "...)
-		buf = append(buf, "\t"...)
-		for _, f := range msg.Fields {
-			buf = append(buf, fmt.Sprintf("%s=%q ", f.Key, fmt.Sprintf("%v", f.Val))...)
-		}
-		buf = append(buf[:len(buf)-1], '\n')
-		_, err = t.bw.Write(buf)
-		if err != nil {
-			return
-		}
-	}
-
-	if t.flags&OutputFlagStackTrace != 0 && msg.StackTrace != nil {
-		buf = buf[:0]
-		buf = append(buf, fmt.Sprintf("%+v\n", msg.StackTrace)...)
-		_, err = t.bw.Write(buf)
-		if err != nil {
-			return
-		}
+	_, err = t.bw.Write(text)
+	if err != nil {
+		return
 	}
 }
 
 // SetWriter sets output writer.
 func (t *TextOutput) SetWriter(w io.Writer) {
 	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.w = w
 	t.bw = bufio.NewWriter(w)
-	t.mu.Unlock()
 }
 
 // SetFlags sets output flags.
-func (t *TextOutput) SetFlags(flags OutputFlag) {
+func (t *TextOutput) SetFlags(flags Flag) {
 	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.flags = flags
-	t.mu.Unlock()
-}
-
-// SetPadding sets custom padding. If padding is empty-string, padding is filled by first line of log.
-func (t *TextOutput) SetPadding(padding string) {
-	t.mu.Lock()
-	t.padding = padding
-	t.mu.Unlock()
 }
 
 // RegisterOnError registers OnError function to use when error occured.

@@ -15,6 +15,7 @@ type Logger struct {
 	output             Output
 	severity           Severity
 	verbose            Verbose
+	flags              Flag
 	printSeverity      Severity
 	stackTraceSeverity Severity
 	prefix             string
@@ -32,6 +33,7 @@ func New(output Output, severity Severity, verbose Verbose) *Logger {
 		output:             output,
 		severity:           severity,
 		verbose:            verbose,
+		flags:              FlagDefault,
 		printSeverity:      SeverityInfo,
 		stackTraceSeverity: SeverityNone,
 	}
@@ -51,6 +53,7 @@ func (l *Logger) Duplicate() *Logger {
 		verbosity:          l.verbosity,
 		time:               l.time,
 		fields:             l.fields.Duplicate(),
+		flags:              l.flags,
 	}
 	return l2
 }
@@ -69,11 +72,12 @@ func (l *Logger) out(severity Severity, message string) {
 			Verbosity: l.verbosity,
 			Time:      l.time,
 			Fields:    l.fields.Duplicate(),
+			Flags:     l.flags,
 		}
 		log.Message = append(log.Message, l.prefix...)
 		log.Message = append(log.Message, message...)
-		if messageLen == 0 || log.Message[messageLen-1] != '\n' {
-			log.Message = append(log.Message, '\n')
+		if messageLen != 0 && log.Message[messageLen-1] == '\n' {
+			log.Message = log.Message[:messageLen-1]
 		}
 		if log.Time.IsZero() {
 			log.Time = time.Now()
@@ -233,6 +237,17 @@ func (l *Logger) SetVerbose(verbose Verbose) {
 	l.verbose = verbose
 }
 
+// SetFlags sets the Logger's flags.
+// By default, FlagDefault.
+func (l *Logger) SetFlags(flags Flag) {
+	if l == nil {
+		return
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.flags = flags
+}
+
 // SetPrintSeverity sets the Logger's severity level which is using with Print methods.
 // If printSeverity is invalid, it sets SeverityInfo. By default, SeverityInfo.
 func (l *Logger) SetPrintSeverity(printSeverity Severity) {
@@ -269,9 +284,9 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	if !(l.verbose >= verbosity) {
 		return nil
 	}
-	ln := l.Duplicate()
-	ln.verbosity = verbosity
-	return ln
+	l2 := l.Duplicate()
+	l2.verbosity = verbosity
+	return l2
 }
 
 // WithPrefix duplicates the Logger and adds given prefix to end of the underlying prefix.
@@ -279,9 +294,9 @@ func (l *Logger) WithPrefix(args ...interface{}) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.Duplicate()
-	ln.prefix += fmt.Sprint(args...) + ": "
-	return ln
+	l2 := l.Duplicate()
+	l2.prefix += fmt.Sprint(args...) + ": "
+	return l2
 }
 
 // WithPrefixf duplicates the Logger and adds given prefix to end of the underlying prefix.
@@ -289,9 +304,9 @@ func (l *Logger) WithPrefixf(format string, args ...interface{}) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.Duplicate()
-	ln.prefix += fmt.Sprintf(format, args...) + ": "
-	return ln
+	l2 := l.Duplicate()
+	l2.prefix += fmt.Sprintf(format, args...) + ": "
+	return l2
 }
 
 // WithTime duplicates the Logger with given time.
@@ -299,9 +314,9 @@ func (l *Logger) WithTime(tm time.Time) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.Duplicate()
-	ln.time = tm
-	return ln
+	l2 := l.Duplicate()
+	l2.time = tm
+	return l2
 }
 
 // WithFields duplicates the Logger with given fields.
@@ -309,9 +324,9 @@ func (l *Logger) WithFields(fields ...Field) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.Duplicate()
-	ln.fields = append(ln.fields, fields...)
-	return ln
+	l2 := l.Duplicate()
+	l2.fields = append(l2.fields, fields...)
+	return l2
 }
 
 // WithFieldKeyVals duplicates the Logger with given key and values of Field.
@@ -324,7 +339,7 @@ func (l *Logger) WithFieldKeyVals(kvs ...interface{}) *Logger {
 	for i := 0; i < n; i++ {
 		j := i * 2
 		k, v := fmt.Sprintf("%v", kvs[j]), kvs[j+1]
-		fields = append(fields, Field{Key: k, Val: v})
+		fields = append(fields, Field{Key: k, Value: v})
 	}
 	return l.WithFields(fields...)
 }
@@ -336,7 +351,7 @@ func (l *Logger) WithFieldMap(fieldMap map[string]interface{}) *Logger {
 	}
 	fields := make(Fields, 0, len(fieldMap))
 	for k, v := range fieldMap {
-		fields = append(fields, Field{Key: k, Val: v})
+		fields = append(fields, Field{Key: k, Value: v})
 	}
 	return l.WithFields(fields...)
 }

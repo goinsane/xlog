@@ -8,7 +8,7 @@ import (
 )
 
 func BenchmarkLogger(b *testing.B) {
-	output := xlog.NewTextOutput(ioutil.Discard, xlog.OutputFlagDefault)
+	output := xlog.NewTextOutput(ioutil.Discard, xlog.FlagDefault)
 	logger := xlog.New(output, xlog.SeverityInfo, 0)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -17,7 +17,7 @@ func BenchmarkLogger(b *testing.B) {
 }
 
 func BenchmarkLoggerStackTrace(b *testing.B) {
-	output := xlog.NewTextOutput(ioutil.Discard, xlog.OutputFlagDefault)
+	output := xlog.NewTextOutput(ioutil.Discard, xlog.FlagDefault)
 	logger := xlog.New(output, xlog.SeverityInfo, 0)
 	logger.SetStackTraceSeverity(xlog.SeverityInfo)
 	b.ResetTimer()
@@ -27,7 +27,7 @@ func BenchmarkLoggerStackTrace(b *testing.B) {
 }
 
 func BenchmarkLoggerV(b *testing.B) {
-	output := xlog.NewTextOutput(ioutil.Discard, xlog.OutputFlagDefault)
+	output := xlog.NewTextOutput(ioutil.Discard, xlog.FlagDefault)
 	logger := xlog.New(output, xlog.SeverityInfo, 5)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -36,7 +36,7 @@ func BenchmarkLoggerV(b *testing.B) {
 }
 
 func BenchmarkOutputFlagShortFunc(b *testing.B) {
-	output := xlog.NewTextOutput(ioutil.Discard, xlog.OutputFlagDefault | xlog.OutputFlagShortFunc)
+	output := xlog.NewTextOutput(ioutil.Discard, xlog.FlagDefault| xlog.FlagShortFunc)
 	logger := xlog.New(output, xlog.SeverityInfo, 0)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -45,7 +45,7 @@ func BenchmarkOutputFlagShortFunc(b *testing.B) {
 }
 
 func BenchmarkOutputFlagShortFile(b *testing.B) {
-	output := xlog.NewTextOutput(ioutil.Discard, xlog.OutputFlagDefault | xlog.OutputFlagShortFile)
+	output := xlog.NewTextOutput(ioutil.Discard, xlog.FlagDefault| xlog.FlagShortFile)
 	logger := xlog.New(output, xlog.SeverityInfo, 0)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

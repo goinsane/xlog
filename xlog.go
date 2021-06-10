@@ -9,7 +9,7 @@ import (
 
 var (
 	defLogger *Logger     = New(defOutput, SeverityInfo, 0)
-	defOutput *TextOutput = NewTextOutput(os.Stderr, OutputFlagDefault)
+	defOutput *TextOutput = NewTextOutput(os.Stderr, FlagDefault)
 )
 
 // DefaultLogger returns the default logger.
@@ -126,9 +126,16 @@ func SetSeverity(severity Severity) {
 	defLogger.SetSeverity(severity)
 }
 
-// SetVerbose sets the default logger's verbose. By default, 0.
+// SetVerbose sets the default logger's verbose.
+// By default, 0.
 func SetVerbose(verbose Verbose) {
 	defLogger.SetVerbose(verbose)
+}
+
+// SetFlags sets the default logger's flags.
+// By default, FlagDefault.
+func SetFlags(flags Flag) {
+	defLogger.SetFlags(flags)
 }
 
 // SetPrintSeverity sets the default logger's severity level which is using with Print functions.
@@ -179,13 +186,8 @@ func SetOutputWriter(w io.Writer) {
 }
 
 // SetOutputFlags sets the default output flags.
-func SetOutputFlags(flags OutputFlag) {
+func SetOutputFlags(flags Flag) {
 	defOutput.SetFlags(flags)
-}
-
-// SetOutputPadding sets custom padding of the default output. If padding is empty-string, padding is filled by first line of log.
-func SetOutputPadding(padding string) {
-	defOutput.SetPadding(padding)
 }
 
 // Reset resets default logger and output options.
@@ -196,5 +198,5 @@ func Reset() {
 	SetPrintSeverity(SeverityInfo)
 	SetStackTraceSeverity(SeverityNone)
 	SetOutputWriter(os.Stderr)
-	SetOutputFlags(OutputFlagDefault)
+	SetOutputFlags(FlagDefault)
 }

@@ -41,3 +41,34 @@ func trimDirs(s string) string {
 	}
 	return s
 }
+
+type fmtState struct {
+	Buffer []byte
+	Wid    int
+	WidOK  bool
+	Prec   int
+	PrecOK bool
+	Flags  []rune
+}
+
+func (f *fmtState) Write(b []byte) (n int, err error) {
+	f.Buffer = b
+	return len(b), nil
+}
+
+func (f *fmtState) Width() (wid int, ok bool) {
+	return f.Wid, f.WidOK
+}
+
+func (f *fmtState) Precision() (prec int, ok bool) {
+	return f.Prec, f.PrecOK
+}
+
+func (f *fmtState) Flag(c int) bool {
+	for _, flag := range f.Flags {
+		if int(flag) == c {
+			return true
+		}
+	}
+	return false
+}
