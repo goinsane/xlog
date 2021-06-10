@@ -2,9 +2,6 @@ package xlog
 
 import (
 	"strings"
-	"time"
-
-	"github.com/goinsane/erf"
 )
 
 // Verbose is type of verbose level.
@@ -24,11 +21,11 @@ func (f Fields) Duplicate() Fields {
 	if f == nil {
 		return nil
 	}
-	result := make(Fields, 0, len(f))
+	f2 := make(Fields, 0, len(f))
 	for i := range f {
-		result = append(result, f[i])
+		f2 = append(f2, f[i])
 	}
-	return result
+	return f2
 }
 
 // Len is implementation of sort.Interface.
@@ -44,29 +41,4 @@ func (f Fields) Less(i, j int) bool {
 // Swap is implementation of sort.Interface.
 func (f Fields) Swap(i, j int) {
 	f[i], f[j] = f[j], f[i]
-}
-
-// Message carries log message.
-type Message struct {
-	Msg         []byte
-	Severity    Severity
-	Verbosity   Verbose
-	Time        time.Time
-	Fields      Fields
-	StackCaller erf.StackCaller
-	StackTrace  *erf.StackTrace
-}
-
-// Duplicate duplicates the Message.
-func (m *Message) Duplicate() *Message {
-	if m == nil {
-		return nil
-	}
-	m2 := new(Message)
-	*m2 = *m
-	m2.Msg = make([]byte, len(m.Msg))
-	copy(m2.Msg, m.Msg)
-	m2.Fields = m.Fields.Duplicate()
-	m2.StackTrace = m.StackTrace.Duplicate()
-	return m2
 }

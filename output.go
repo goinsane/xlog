@@ -17,12 +17,12 @@ import (
 // Output is an interface for Logger output. All of Output implementations must be
 // concurrent-safe.
 type Output interface {
-	Log(msg *Message)
+	Log(msg *Log)
 }
 
 type multiOutput []Output
 
-func (m multiOutput) Log(msg *Message) {
+func (m multiOutput) Log(msg *Log) {
 	for _, o := range m {
 		o.Log(msg.Duplicate())
 	}
@@ -37,7 +37,7 @@ func MultiOutput(outputs ...Output) Output {
 
 type asyncOutput struct{ Output }
 
-func (a *asyncOutput) Log(msg *Message) {
+func (a *asyncOutput) Log(msg *Log) {
 	go a.Output.Log(msg)
 }
 
@@ -52,7 +52,7 @@ type QueuedOutput struct {
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
 	output      Output
-	queue       chan *Message
+	queue       chan *Log
 	blocking    uint32
 	onQueueFull *func()
 }
@@ -64,7 +64,7 @@ func NewQueuedOutput(output Output, queueLen int) (q *QueuedOutput) {
 	}
 	q = &QueuedOutput{
 		output: output,
-		queue:  make(chan *Message, queueLen),
+		queue:  make(chan *Log, queueLen),
 	}
 	q.ctx, q.ctxCancel = context.WithCancel(context.Background())
 	go q.worker()
@@ -80,7 +80,7 @@ func (q *QueuedOutput) Close() {
 // If blocking is true, Log method blocks execution until underlying output has finished execution.
 // Otherwise, Log method sends log to queue if queue is available. When queue is full, it tries to call OnQueueFull
 // function.
-func (q *QueuedOutput) Log(msg *Message) {
+func (q *QueuedOutput) Log(msg *Log) {
 	select {
 	case <-q.ctx.Done():
 		return
@@ -204,7 +204,7 @@ func NewTextOutput(w io.Writer, flags OutputFlag) *TextOutput {
 }
 
 // Log implementes Output.Log
-func (t *TextOutput) Log(msg *Message) {
+func (t *TextOutput) Log(msg *Log) {
 	var err error
 	defer func() {
 		if err == nil || t.onError == nil || *t.onError == nil {
@@ -313,25 +313,25 @@ func (t *TextOutput) Log(msg *Message) {
 		}
 	}
 
-	for i := 0; len(msg.Msg) > 0; i++ {
+	for i := 0; len(msg.Message) > 0; i++ {
 		if i > 0 {
 			_, err = t.bw.WriteString(padding)
 			if err != nil {
 				return
 			}
 		}
-		idx := bytes.IndexByte(msg.Msg, '\n')
+		idx := bytes.IndexByte(msg.Message, '\n')
 		if idx < 0 {
-			msg.Msg = append(msg.Msg, '\n')
-			idx = len(msg.Msg)
+			msg.Message = append(msg.Message, '\n')
+			idx = len(msg.Message)
 		} else {
 			idx++
 		}
-		_, err = t.bw.Write(msg.Msg[:idx])
+		_, err = t.bw.Write(msg.Message[:idx])
 		if err != nil {
 			return
 		}
-		msg.Msg = msg.Msg[idx:]
+		msg.Message = msg.Message[idx:]
 	}
 
 	if t.flags&OutputFlagFields != 0 && len(msg.Fields) > 0 {
@@ -351,7 +351,7 @@ func (t *TextOutput) Log(msg *Message) {
 
 	if t.flags&OutputFlagStackTrace != 0 && msg.StackTrace != nil {
 		buf = buf[:0]
-		buf = append(buf, msg.StackTrace.String()...)
+		buf = append(buf, fmt.Sprintf("%+v\n", msg.StackTrace)...)
 		_, err = t.bw.Write(buf)
 		if err != nil {
 			return

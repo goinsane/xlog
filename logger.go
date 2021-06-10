@@ -40,6 +40,7 @@ func New(output Output, severity Severity, verbose Verbose) *Logger {
 // Duplicate duplicates the Logger.
 func (l *Logger) Duplicate() *Logger {
 	l.mu.RLock()
+	defer l.mu.RUnlock()
 	l2 := &Logger{
 		output:             l.output,
 		severity:           l.severity,
@@ -51,7 +52,6 @@ func (l *Logger) Duplicate() *Logger {
 		time:               l.time,
 		fields:             l.fields.Duplicate(),
 	}
-	l.mu.RUnlock()
 	return l2
 }
 
@@ -60,29 +60,30 @@ func (l *Logger) out(severity Severity, message string) {
 		return
 	}
 	l.mu.RLock()
+	defer l.mu.RUnlock()
 	if l.output != nil && l.severity >= severity && l.verbose >= l.verbosity {
-		msg := &Message{}
 		messageLen := len(l.prefix) + len(message)
-		msg.Msg = make([]byte, 0, messageLen+1)
-		msg.Msg = append(msg.Msg, l.prefix...)
-		msg.Msg = append(msg.Msg, message...)
-		if messageLen == 0 || msg.Msg[messageLen-1] != '\n' {
-			msg.Msg = append(msg.Msg, '\n')
+		log := &Log{
+			Message:   make([]byte, 0, messageLen+1),
+			Severity:  severity,
+			Verbosity: l.verbosity,
+			Time:      l.time,
+			Fields:    l.fields.Duplicate(),
 		}
-		msg.Severity = severity
-		msg.Verbosity = l.verbosity
-		msg.Time = l.time
-		if msg.Time.IsZero() {
-			msg.Time = time.Now()
+		log.Message = append(log.Message, l.prefix...)
+		log.Message = append(log.Message, message...)
+		if messageLen == 0 || log.Message[messageLen-1] != '\n' {
+			log.Message = append(log.Message, '\n')
 		}
-		msg.Fields = l.fields.Duplicate()
-		msg.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
+		if log.Time.IsZero() {
+			log.Time = time.Now()
+		}
+		log.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
 		if l.stackTraceSeverity >= severity {
-			msg.StackTrace = erf.NewStackTrace(erf.PC(erf.DefaultPCSize, 5)...)
+			log.StackTrace = erf.NewStackTrace(erf.PC(erf.DefaultPCSize, 5)...)
 		}
-		l.output.Log(msg)
+		l.output.Log(log)
 	}
-	l.mu.RUnlock()
 }
 
 func (l *Logger) log(severity Severity, args ...interface{}) {
@@ -205,8 +206,8 @@ func (l *Logger) SetOutput(output Output) {
 		return
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	l.output = output
-	l.mu.Unlock()
 }
 
 // SetSeverity sets the Logger's severity. If severity is invalid, it sets SeverityInfo.
@@ -215,11 +216,11 @@ func (l *Logger) SetSeverity(severity Severity) {
 		return
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	if !severity.IsValid() {
 		severity = SeverityInfo
 	}
 	l.severity = severity
-	l.mu.Unlock()
 }
 
 // SetVerbose sets the Logger's verbose.
@@ -228,8 +229,8 @@ func (l *Logger) SetVerbose(verbose Verbose) {
 		return
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	l.verbose = verbose
-	l.mu.Unlock()
 }
 
 // SetPrintSeverity sets the Logger's severity level which is using with Print methods.
@@ -239,11 +240,11 @@ func (l *Logger) SetPrintSeverity(printSeverity Severity) {
 		return
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	if !printSeverity.IsValid() {
 		printSeverity = SeverityInfo
 	}
 	l.printSeverity = printSeverity
-	l.mu.Unlock()
 }
 
 // SetStackTraceSeverity sets the Logger's severity level which allows printing stack trace.
@@ -253,14 +254,14 @@ func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) {
 		return
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	if !stackTraceSeverity.IsValid() {
 		stackTraceSeverity = SeverityNone
 	}
 	l.stackTraceSeverity = stackTraceSeverity
-	l.mu.Unlock()
 }
 
-// V clones the Logger if Logger's verbose is greater or equal than given verbosity. Otherwise returns nil.
+// V duplicates the Logger if Logger's verbose is greater or equal than given verbosity. Otherwise returns nil.
 func (l *Logger) V(verbosity Verbose) *Logger {
 	if l == nil {
 		return nil
@@ -273,7 +274,7 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	return ln
 }
 
-// WithPrefix clones the Logger and adds given prefix to end of the underlying prefix.
+// WithPrefix duplicates the Logger and adds given prefix to end of the underlying prefix.
 func (l *Logger) WithPrefix(args ...interface{}) *Logger {
 	if l == nil {
 		return nil
@@ -283,7 +284,7 @@ func (l *Logger) WithPrefix(args ...interface{}) *Logger {
 	return ln
 }
 
-// WithPrefixf clones the Logger and adds given prefix to end of the underlying prefix.
+// WithPrefixf duplicates the Logger and adds given prefix to end of the underlying prefix.
 func (l *Logger) WithPrefixf(format string, args ...interface{}) *Logger {
 	if l == nil {
 		return nil
@@ -293,7 +294,7 @@ func (l *Logger) WithPrefixf(format string, args ...interface{}) *Logger {
 	return ln
 }
 
-// WithTime clones the Logger with given time.
+// WithTime duplicates the Logger with given time.
 func (l *Logger) WithTime(tm time.Time) *Logger {
 	if l == nil {
 		return nil
@@ -303,7 +304,7 @@ func (l *Logger) WithTime(tm time.Time) *Logger {
 	return ln
 }
 
-// WithFields clones the Logger with given fields.
+// WithFields duplicates the Logger with given fields.
 func (l *Logger) WithFields(fields ...Field) *Logger {
 	if l == nil {
 		return nil
@@ -313,7 +314,7 @@ func (l *Logger) WithFields(fields ...Field) *Logger {
 	return ln
 }
 
-// WithFieldKeyVals clones the Logger with given key and values of Field.
+// WithFieldKeyVals duplicates the Logger with given key and values of Field.
 func (l *Logger) WithFieldKeyVals(kvs ...interface{}) *Logger {
 	if l == nil {
 		return nil
@@ -328,7 +329,7 @@ func (l *Logger) WithFieldKeyVals(kvs ...interface{}) *Logger {
 	return l.WithFields(fields...)
 }
 
-// WithFieldMap clones the Logger with given fieldMap.
+// WithFieldMap duplicates the Logger with given fieldMap.
 func (l *Logger) WithFieldMap(fieldMap map[string]interface{}) *Logger {
 	if l == nil {
 		return nil
