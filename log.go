@@ -111,12 +111,12 @@ func (l *Log) Format(f fmt.State, verb rune) {
 			file, line := "???", 0
 			if l.StackCaller.File != "" {
 				file = trimSrcPath(l.StackCaller.File)
+				if l.Flags&FlagShortFile != 0 {
+					file = trimDirs(file)
+				}
 			}
 			if l.StackCaller.Line > 0 {
 				line = l.StackCaller.Line
-			}
-			if l.Flags&FlagShortFile != 0 {
-				file = trimDirs(file)
 			}
 			buf.WriteString(file)
 			buf.WriteRune(':')
