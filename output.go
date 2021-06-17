@@ -174,6 +174,10 @@ func (t *TextOutput) Log(log *Log) {
 		}
 	}()
 
+	if t.flags != 0 {
+		log.Flags = t.flags
+	}
+
 	var text []byte
 	text, err = log.MarshalText()
 	if err != nil {
@@ -194,7 +198,7 @@ func (t *TextOutput) SetWriter(w io.Writer) {
 	t.bw = bufio.NewWriter(w)
 }
 
-// SetFlags sets output flags.
+// SetFlags overrides every single Log.Flags if the flags argument different than 0.
 func (t *TextOutput) SetFlags(flags Flag) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
