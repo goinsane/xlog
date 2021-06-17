@@ -1,27 +1,84 @@
 package xlog
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/goinsane/erf"
+)
+
+var (
+	ErrUnknownSeverity = erf.New("unknown severity")
+)
 
 // Severity is type of severity level.
 type Severity int
 
-// String returns severity name by string.
-func (sv Severity) String() string {
-	if sv.IsValid() {
-		return sSeverities[int(sv)]
-	}
-	return sSeverityNone
+// String is implementation of fmt.Stringer.
+func (s Severity) String() string {
+	text, _ := s.MarshalText()
+	return string(text)
 }
 
-// IsValid checks Severity value is valid.
-func (sv Severity) IsValid() bool {
-	k := int(sv)
-	return k >= 0 && k < len(severities)
+// IsValid returns whether value is valid.
+func (s Severity) IsValid() bool {
+	return s.CheckValid() == nil
+}
+
+// CheckValid returns error for invalid value.
+func (s Severity) CheckValid() error {
+	_, err := s.MarshalText()
+	return err
+}
+
+// MarshalText is implementation of encoding.TextMarshaler.
+func (s Severity) MarshalText() (text []byte, err error) {
+	var str string
+	switch s {
+	case SeverityNone:
+		str = "NONE"
+	case SeverityFatal:
+		str = "FATAL"
+	case SeverityError:
+		str = "ERROR"
+	case SeverityWarning:
+		str = "WARNING"
+	case SeverityInfo:
+		str = "INFO"
+	case SeverityDebug:
+		str = "DEBUG"
+	default:
+		return nil, erf.Wrap(ErrUnknownSeverity)
+	}
+	return []byte(str), nil
+}
+
+// UnmarshalText is implementation of encoding.UnmarshalText.
+func (s *Severity) UnmarshalText(text []byte) error {
+	switch str := strings.ToUpper(string(text)); str {
+	case "NONE", "NON", "NA":
+		*s = SeverityNone
+	case "FATAL", "FTL":
+		*s = SeverityFatal
+	case "ERROR", "ERR":
+		*s = SeverityError
+	case "WARNING", "WRN", "WARN":
+		*s = SeverityWarning
+	case "INFO", "INF":
+		*s = SeverityInfo
+	case "DEBUG", "DBG":
+		*s = SeverityDebug
+	default:
+		return erf.Wrap(ErrUnknownSeverity)
+	}
+	return nil
 }
 
 const (
+	// SeverityNone is none or unspecified severity level
+	SeverityNone = Severity(iota)
+
 	// SeverityFatal is fatal severity level
-	SeverityFatal = Severity(iota)
+	SeverityFatal
 
 	// SeverityError is error severity level
 	SeverityError
@@ -35,40 +92,3 @@ const (
 	// SeverityDebug is debug severity level
 	SeverityDebug
 )
-
-var severities = []Severity{SeverityFatal, SeverityError, SeverityWarning, SeverityInfo, SeverityDebug}
-
-// SeverityNone is none or unknown severity level
-const SeverityNone = -1
-
-const (
-	sSeverityFatal   = "FATAL"
-	sSeverityError   = "ERROR"
-	sSeverityWarning = "WARNING"
-	sSeverityInfo    = "INFO"
-	sSeverityDebug   = "DEBUG"
-	sSeverityNone    = "NONE"
-)
-
-var sSeverities = []string{sSeverityFatal, sSeverityError, sSeverityWarning, sSeverityInfo, sSeverityDebug}
-
-// ParseSeverity parses severity name. If it fails, returns SeverityNone.
-func ParseSeverity(s string) Severity {
-	s = strings.ToUpper(s)
-	if s == sSeverityFatal {
-		return SeverityFatal
-	}
-	if s == sSeverityError || s == "ERR" {
-		return SeverityError
-	}
-	if s == sSeverityWarning || s == "WARN" {
-		return SeverityWarning
-	}
-	if s == sSeverityInfo {
-		return SeverityInfo
-	}
-	if s == sSeverityDebug || s == "DBG" {
-		return SeverityDebug
-	}
-	return SeverityNone
-}
