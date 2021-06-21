@@ -96,17 +96,21 @@ func (q *QueuedOutput) Log(log *Log) {
 }
 
 // SetBlocking sets QueuedOutput behavior when queue is full.
-func (q *QueuedOutput) SetBlocking(blocking bool) {
+// It returns underlying QueuedOutput.
+func (q *QueuedOutput) SetBlocking(blocking bool) *QueuedOutput {
 	var b uint32
 	if blocking {
 		b = 1
 	}
 	atomic.StoreUint32(&q.blocking, b)
+	return q
 }
 
-// RegisterOnQueueFull registers OnQueueFull function to use when queue is full.
-func (q *QueuedOutput) RegisterOnQueueFull(f func()) {
+// SetOnQueueFull sets a function to call when queue is full.
+// It returns underlying QueuedOutput.
+func (q *QueuedOutput) SetOnQueueFull(f func()) *QueuedOutput {
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&q.onQueueFull)), unsafe.Pointer(&f))
+	return q
 }
 
 // WaitForEmpty waits until queue is empty by given context.
@@ -190,22 +194,28 @@ func (t *TextOutput) Log(log *Log) {
 }
 
 // SetWriter sets writer.
-func (t *TextOutput) SetWriter(w io.Writer) {
+// It returns underlying TextOutput.
+func (t *TextOutput) SetWriter(w io.Writer) *TextOutput {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.w = w
 	t.bw = bufio.NewWriter(w)
+	return t
 }
 
 // SetFlags sets flags to override every single Log.Flags if the flags argument different than 0.
+// It returns underlying TextOutput.
 // By default, 0.
-func (t *TextOutput) SetFlags(flags Flag) {
+func (t *TextOutput) SetFlags(flags Flag) *TextOutput {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.flags = flags
+	return t
 }
 
-// RegisterOnError registers OnError function to use when error occured.
-func (t *TextOutput) RegisterOnError(f func(error)) {
+// SetOnError sets a function to call when error occurs.
+// It returns underlying TextOutput.
+func (t *TextOutput) SetOnError(f func(error)) *TextOutput {
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&t.onError)), unsafe.Pointer(&f))
+	return t
 }
