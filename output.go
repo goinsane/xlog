@@ -146,11 +146,10 @@ type TextOutput struct {
 }
 
 // NewTextOutput creates a new TextOutput.
-func NewTextOutput(w io.Writer, flags Flag) *TextOutput {
+func NewTextOutput(w io.Writer) *TextOutput {
 	return &TextOutput{
-		w:     w,
-		bw:    bufio.NewWriter(w),
-		flags: flags,
+		w:  w,
+		bw: bufio.NewWriter(w),
 	}
 }
 
@@ -199,6 +198,7 @@ func (t *TextOutput) SetWriter(w io.Writer) {
 }
 
 // SetFlags overrides every single Log.Flags if the flags argument different than 0.
+// By default, 0.
 func (t *TextOutput) SetFlags(flags Flag) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
