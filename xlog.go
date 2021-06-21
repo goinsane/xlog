@@ -104,17 +104,17 @@ func Debugln(args ...interface{}) {
 	defaultLogger.logln(SeverityDebug, args...)
 }
 
-// Print logs to the default Logger.
+// Print logs a log which has the default Logger's print severity to the default Logger.
 func Print(args ...interface{}) {
 	defaultLogger.log(defaultLogger.printSeverity, args...)
 }
 
-// Printf logs to the default Logger.
+// Printf logs a log which has the default Logger's print severity to the default Logger.
 func Printf(format string, args ...interface{}) {
 	defaultLogger.logf(defaultLogger.printSeverity, format, args...)
 }
 
-// Println logs to the default Logger.
+// Println logs a log which has the default Logger's print severity to the default Logger.
 func Println(args ...interface{}) {
 	defaultLogger.logln(defaultLogger.printSeverity, args...)
 }
