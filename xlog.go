@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	defaultLogger *Logger     = New(defaultOutput, SeverityInfo, 0)
-	defaultOutput *TextOutput = NewTextOutput(os.Stderr)
-
-	defaultPCSize = erf.DefaultPCSize
+	defaultLogger       = New(defaultOutput, SeverityInfo, 0)
+	defaultOutput       = NewTextOutput(defaultOutputWriter)
+	defaultOutputWriter = os.Stderr
+	defaultPCSize       = erf.DefaultPCSize
 )
 
 // DefaultLogger returns the default Logger.
@@ -21,7 +21,7 @@ func DefaultLogger() *Logger {
 	return defaultLogger
 }
 
-// DefaultOutput returns the default Output as Output. Type of the default Output is TextOutput.
+// DefaultOutput returns the default Output as Output type. Real type of the default Output is TextOutput.
 func DefaultOutput() Output {
 	return defaultOutput
 }
@@ -119,80 +119,93 @@ func Println(args ...interface{}) {
 	defaultLogger.logln(defaultLogger.printSeverity, args...)
 }
 
-// SetOutput sets the default Logger's output. By default, the default Output.
-func SetOutput(output Output) {
-	defaultLogger.SetOutput(output)
+// SetOutput sets the default Logger's output.
+// It returns the default Logger.
+// By default, the default Output.
+func SetOutput(output Output) *Logger {
+	return defaultLogger.SetOutput(output)
 }
 
-// SetSeverity sets the default Logger's severity. If severity is invalid, it sets SeverityInfo.
+// SetSeverity sets the default Logger's severity.
+// If severity is invalid, it sets SeverityInfo.
+// It returns the default Logger.
 // By default, SeverityInfo.
-func SetSeverity(severity Severity) {
-	defaultLogger.SetSeverity(severity)
+func SetSeverity(severity Severity) *Logger {
+	return defaultLogger.SetSeverity(severity)
 }
 
 // SetVerbose sets the default Logger's verbose.
+// It returns the default Logger.
 // By default, 0.
-func SetVerbose(verbose Verbose) {
-	defaultLogger.SetVerbose(verbose)
+func SetVerbose(verbose Verbose) *Logger {
+	return defaultLogger.SetVerbose(verbose)
 }
 
 // SetFlags sets the default Logger's flags.
+// It returns the default Logger.
 // By default, FlagDefault.
-func SetFlags(flags Flag) {
-	defaultLogger.SetFlags(flags)
+func SetFlags(flags Flag) *Logger {
+	return defaultLogger.SetFlags(flags)
 }
 
 // SetPrintSeverity sets the default Logger's severity level which is using with Print methods.
-// If printSeverity is invalid, it sets SeverityInfo. By default, SeverityInfo.
-func SetPrintSeverity(printSeverity Severity) {
-	defaultLogger.SetPrintSeverity(printSeverity)
+// If printSeverity is invalid, it sets SeverityInfo.
+// It returns the default Logger.
+// By default, SeverityInfo.
+func SetPrintSeverity(printSeverity Severity) *Logger {
+	return defaultLogger.SetPrintSeverity(printSeverity)
 }
 
 // SetStackTraceSeverity sets the default Logger's severity level which allows printing stack trace.
-// If stackTraceSeverity is invalid, it sets SeverityNone. By default, SeverityNone.
-func SetStackTraceSeverity(stackTraceSeverity Severity) {
-	defaultLogger.SetStackTraceSeverity(stackTraceSeverity)
+// If stackTraceSeverity is invalid, it sets SeverityNone.
+// It returns the default Logger.
+// By default, SeverityNone.
+func SetStackTraceSeverity(stackTraceSeverity Severity) *Logger {
+	return defaultLogger.SetStackTraceSeverity(stackTraceSeverity)
 }
 
-// V clones the default Logger if the default Logger's verbose is greater or equal to given verbosity. Otherwise returns nil.
+// V duplicates the default Logger if the default Logger's verbose is greater or equal to given verbosity. Otherwise returns nil.
 func V(verbosity Verbose) *Logger {
 	return defaultLogger.V(verbosity)
 }
 
-// WithPrefix clones the default Logger and adds given prefix to end of the underlying prefix.
+// WithPrefix duplicates the default Logger and adds given prefix to end of the underlying prefix.
 func WithPrefix(args ...interface{}) *Logger {
 	return defaultLogger.WithPrefix(args...)
 }
 
-// WithPrefixf clones the default Logger and adds given prefix to end of the underlying prefix.
+// WithPrefixf duplicates the default Logger and adds given prefix to end of the underlying prefix.
 func WithPrefixf(format string, args ...interface{}) *Logger {
 	return defaultLogger.WithPrefixf(format, args...)
 }
 
-// WithTime clones the default Logger with given time.
+// WithTime duplicates the default Logger with given time.
 func WithTime(tm time.Time) *Logger {
 	return defaultLogger.WithTime(tm)
 }
 
-// WithFields clones the default Logger with given fields.
+// WithFields duplicates the default Logger with given fields.
 func WithFields(fields ...Field) *Logger {
 	return defaultLogger.WithFields(fields...)
 }
 
-// WithFieldKeyVals clones the default Logger with given key and values of Field.
+// WithFieldKeyVals duplicates the default Logger with given key and values of Field.
 func WithFieldKeyVals(kvs ...interface{}) *Logger {
 	return defaultLogger.WithFieldKeyVals(kvs...)
 }
 
 // SetOutputWriter sets the default Output's writer.
-func SetOutputWriter(w io.Writer) {
-	defaultOutput.SetWriter(w)
+// It returns the default Output as TextOutput type.
+// By default, os.Stderr.
+func SetOutputWriter(w io.Writer) *TextOutput {
+	return defaultOutput.SetWriter(w)
 }
 
 // SetOutputFlags sets the default Output's flags to override every single Log.Flags if the flags argument different than 0.
+// It returns the default Output as TextOutput type.
 // By default, 0.
-func SetOutputFlags(flags Flag) {
-	defaultOutput.SetFlags(flags)
+func SetOutputFlags(flags Flag) *TextOutput {
+	return defaultOutput.SetFlags(flags)
 }
 
 // Reset resets the default Logger and the default Output.
@@ -203,6 +216,6 @@ func Reset() {
 	SetFlags(FlagDefault)
 	SetPrintSeverity(SeverityInfo)
 	SetStackTraceSeverity(SeverityNone)
-	SetOutputWriter(os.Stderr)
+	SetOutputWriter(defaultOutputWriter)
 	SetOutputFlags(0)
 }
