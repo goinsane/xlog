@@ -21,8 +21,8 @@ func DefaultLogger() *Logger {
 	return defaultLogger
 }
 
-// DefaultOutput returns the default Output as Output type. Real type of the default Output is TextOutput.
-func DefaultOutput() Output {
+// DefaultOutput returns the default Output as TextOutput type.
+func DefaultOutput() *TextOutput {
 	return defaultOutput
 }
 
