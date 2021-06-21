@@ -225,19 +225,23 @@ func (l *Logger) Println(args ...interface{}) {
 }
 
 // SetOutput sets the Logger's output.
-func (l *Logger) SetOutput(output Output) {
+// It returns underlying Logger.
+func (l *Logger) SetOutput(output Output) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.output = output
+	return l
 }
 
-// SetSeverity sets the Logger's severity. If severity is invalid, it sets SeverityInfo.
-func (l *Logger) SetSeverity(severity Severity) {
+// SetSeverity sets the Logger's severity.
+// If severity is invalid, it sets SeverityInfo.
+// It returns underlying Logger.
+func (l *Logger) SetSeverity(severity Severity) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -245,34 +249,41 @@ func (l *Logger) SetSeverity(severity Severity) {
 		severity = SeverityInfo
 	}
 	l.severity = severity
+	return l
 }
 
 // SetVerbose sets the Logger's verbose.
-func (l *Logger) SetVerbose(verbose Verbose) {
+// It returns underlying Logger.
+func (l *Logger) SetVerbose(verbose Verbose) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.verbose = verbose
+	return l
 }
 
 // SetFlags sets the Logger's flags.
+// It returns underlying Logger.
 // By default, FlagDefault.
-func (l *Logger) SetFlags(flags Flag) {
+func (l *Logger) SetFlags(flags Flag) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.flags = flags
+	return l
 }
 
 // SetPrintSeverity sets the Logger's severity level which is using with Print methods.
-// If printSeverity is invalid, it sets SeverityInfo. By default, SeverityInfo.
-func (l *Logger) SetPrintSeverity(printSeverity Severity) {
+// If printSeverity is invalid, it sets SeverityInfo.
+// It returns underlying Logger.
+// By default, SeverityInfo.
+func (l *Logger) SetPrintSeverity(printSeverity Severity) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -280,13 +291,16 @@ func (l *Logger) SetPrintSeverity(printSeverity Severity) {
 		printSeverity = SeverityInfo
 	}
 	l.printSeverity = printSeverity
+	return l
 }
 
 // SetStackTraceSeverity sets the Logger's severity level which allows printing stack trace.
-// If stackTraceSeverity is invalid, it sets SeverityNone. By default, SeverityNone.
-func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) {
+// If stackTraceSeverity is invalid, it sets SeverityNone.
+// It returns underlying Logger.
+// By default, SeverityNone.
+func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -294,6 +308,7 @@ func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) {
 		stackTraceSeverity = SeverityNone
 	}
 	l.stackTraceSeverity = stackTraceSeverity
+	return l
 }
 
 // V duplicates the Logger if the Logger's verbose is greater or equal to given verbosity. Otherwise returns nil.
