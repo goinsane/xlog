@@ -58,7 +58,7 @@ func (l *Logger) Duplicate() *Logger {
 	return l2
 }
 
-func (l *Logger) out(severity Severity, message string) {
+func (l *Logger) out(severity Severity, message string, err error) {
 	if l == nil {
 		return
 	}
@@ -67,7 +67,8 @@ func (l *Logger) out(severity Severity, message string) {
 	if l.output != nil && l.severity >= severity && l.verbose >= l.verbosity {
 		messageLen := len(l.prefix) + len(message)
 		log := &Log{
-			Message:   make([]byte, 0, messageLen+1),
+			Message:   make([]byte, 0, messageLen),
+			Error:     err,
 			Severity:  severity,
 			Verbosity: l.verbosity,
 			Time:      l.time,
@@ -84,22 +85,41 @@ func (l *Logger) out(severity Severity, message string) {
 		}
 		log.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
 		if l.stackTraceSeverity >= severity {
-			log.StackTrace = erf.NewStackTrace(erf.PC(erf.DefaultPCSize, 5)...)
+			log.StackTrace = erf.NewStackTrace(erf.PC(defaultPCSize, 5)...)
 		}
 		l.output.Log(log)
 	}
 }
 
 func (l *Logger) log(severity Severity, args ...interface{}) {
-	l.out(severity, fmt.Sprint(args...))
+	var err error
+	for _, arg := range args {
+		if e, ok := arg.(error); ok {
+			err = e
+			break
+		}
+	}
+	l.out(severity, fmt.Sprint(args...), err)
 }
 
 func (l *Logger) logf(severity Severity, format string, args ...interface{}) {
-	l.out(severity, fmt.Sprintf(format, args...))
+	var err error
+	wErr := fmt.Errorf(format, args...)
+	if e, ok := wErr.(erf.WrappedError); ok {
+		err = e.Unwrap()
+	}
+	l.out(severity, wErr.Error(), err)
 }
 
 func (l *Logger) logln(severity Severity, args ...interface{}) {
-	l.out(severity, fmt.Sprintln(args...))
+	var err error
+	for _, arg := range args {
+		if e, ok := arg.(error); ok {
+			err = e
+			break
+		}
+	}
+	l.out(severity, fmt.Sprintln(args...), err)
 }
 
 // Fatal logs to the FATAL severity logs, then calls os.Exit(1).
@@ -180,7 +200,7 @@ func (l *Logger) Debugln(args ...interface{}) {
 	l.logln(SeverityDebug, args...)
 }
 
-// Print logs to logs has Logger's print severity.
+// Print logs a log which has the Logger's print severity.
 func (l *Logger) Print(args ...interface{}) {
 	if l == nil {
 		return
@@ -188,7 +208,7 @@ func (l *Logger) Print(args ...interface{}) {
 	l.log(l.printSeverity, args...)
 }
 
-// Printf logs to logs has Logger's print severity.
+// Printf logs a log which has the Logger's print severity.
 func (l *Logger) Printf(format string, args ...interface{}) {
 	if l == nil {
 		return
@@ -196,7 +216,7 @@ func (l *Logger) Printf(format string, args ...interface{}) {
 	l.logf(l.printSeverity, format, args...)
 }
 
-// Println logs to logs has Logger's print severity.
+// Println logs a log which has the Logger's print severity.
 func (l *Logger) Println(args ...interface{}) {
 	if l == nil {
 		return
@@ -276,7 +296,7 @@ func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) {
 	l.stackTraceSeverity = stackTraceSeverity
 }
 
-// V duplicates the Logger if Logger's verbose is greater or equal than given verbosity. Otherwise returns nil.
+// V duplicates the Logger if the Logger's verbose is greater or equal than given verbosity. Otherwise returns nil.
 func (l *Logger) V(verbosity Verbose) *Logger {
 	if l == nil {
 		return nil
