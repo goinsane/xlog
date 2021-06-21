@@ -12,6 +12,7 @@ import (
 // Log carries the log.
 type Log struct {
 	Message     []byte
+	Error       error
 	Severity    Severity
 	Verbosity   Verbose
 	Time        time.Time
@@ -28,6 +29,7 @@ func (l *Log) Duplicate() *Log {
 	}
 	l2 := &Log{
 		Message:     nil,
+		Error:       l.Error,
 		Severity:    l.Severity,
 		Verbosity:   l.Verbosity,
 		Time:        l.Time,
