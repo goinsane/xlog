@@ -189,7 +189,7 @@ func (t *TextOutput) Log(log *Log) {
 	}
 }
 
-// SetWriter sets output writer.
+// SetWriter sets writer.
 func (t *TextOutput) SetWriter(w io.Writer) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -197,7 +197,7 @@ func (t *TextOutput) SetWriter(w io.Writer) {
 	t.bw = bufio.NewWriter(w)
 }
 
-// SetFlags overrides every single Log.Flags if the flags argument different than 0.
+// SetFlags sets flags to override every single Log.Flags if the flags argument different than 0.
 // By default, 0.
 func (t *TextOutput) SetFlags(flags Flag) {
 	t.mu.Lock()
