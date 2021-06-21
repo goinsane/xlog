@@ -26,7 +26,8 @@ func Example() {
 }
 
 func ExampleLogger() {
-	logger := xlog.New(xlog.NewTextOutput(os.Stdout, xlog.FlagSeverity), xlog.SeverityInfo, 2)
+	logger := xlog.New(xlog.NewTextOutput(os.Stdout), xlog.SeverityInfo, 2)
+	logger.SetFlags(xlog.FlagSeverity)
 
 	logger.Info("this is info log, verbosity 0.")
 	logger.V(0).Warning("this is warning log, verbosity 0.")
@@ -43,8 +44,8 @@ func ExampleLogger() {
 }
 
 func ExampleTextOutput() {
-	output := xlog.NewTextOutput(os.Stdout, xlog.FlagSeverity)
-	logger := xlog.New(output, xlog.SeverityInfo, 2)
+	logger := xlog.New(xlog.NewTextOutput(os.Stdout), xlog.SeverityInfo, 2)
+	logger.SetFlags(xlog.FlagSeverity)
 
 	logger.Info("this is info log, verbosity 0.")
 	logger.V(0).Warning("this is warning log, verbosity 0.")
@@ -63,10 +64,8 @@ func ExampleTextOutput() {
 func ExamplePkg() {
 	// needing to reset previous example changes
 	xlog.Reset()
+	xlog.SetFlags(xlog.FlagSeverity)
 	xlog.SetOutputWriter(os.Stdout)
-
-	// set output flags for testable results
-	xlog.SetOutputFlags(xlog.FlagSeverity)
 
 	xlog.Debug("this is debug log, verbosity 0. it will not be shown.")
 	xlog.Info("this is info log, verbosity 0.")
