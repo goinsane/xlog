@@ -40,7 +40,8 @@ func New(opts Options) (g *GelfOutput, err error) {
 }
 
 // Close closes GelfOutput. Unused GelfOutput must be closed for freeing resources.
-func (g *GelfOutput) Close() (err error) {
+func (g *GelfOutput) Close() error {
+	var err error
 	g.ctxCancel()
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -53,7 +54,7 @@ func (g *GelfOutput) Close() (err error) {
 			g.writer = nil
 		}
 	}
-	return
+	return err
 }
 
 // Log is implementation of xlog.Output.
