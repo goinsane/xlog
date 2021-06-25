@@ -306,6 +306,6 @@ func Reset() {
 	SetVerbose(0)
 	SetPrintSeverity(SeverityInfo)
 	SetStackTraceSeverity(SeverityNone)
-	SetOutputWriter(os.Stdout)
+	SetOutputWriter(os.Stderr)
 	SetOutputFlags(OutputFlagDefault)
 }
