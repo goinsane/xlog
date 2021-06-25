@@ -1,6 +1,6 @@
 # xlog
 
-[![GoDoc](https://godoc.org/github.com/goinsane/xlog?status.svg)](https://godoc.org/github.com/goinsane/xlog)
+[![Go Reference](https://pkg.go.dev/badge/github.com/goinsane/xlog.svg)](https://pkg.go.dev/github.com/goinsane/xlog)
 
 Package xlog provides leveled and structured logging.
 
