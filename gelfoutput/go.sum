@@ -1,3 +1,5 @@
+github.com/goinsane/erf v1.0.2 h1:UwngrFurcUnUklpE0U4dnqFvSGDQsRfwXbjWRyUcTOY=
+github.com/goinsane/erf v1.0.2/go.mod h1:KIGOu4SVAUGC5gHe3Q/uCswZN40wwPFJ9MS924nA/AI=
 github.com/goinsane/xlog v1.0.0 h1:YO27ov5I3WmD8AyV3EcowNf+ZGqcKex8PUJu2TxdmOI=
 github.com/goinsane/xlog v1.0.0/go.mod h1:LXGz2XS2nzNGvHbFAAPrPDELBXCeQyo2vb60ostxKyU=
 gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0 h1:Xg23ydYYJLmb9AK3XdcEpplHZd1MpN3X2ZeeMoBClmY=
