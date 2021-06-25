@@ -68,8 +68,9 @@ func NewQueuedOutput(output Output, queueLen int) (q *QueuedOutput) {
 }
 
 // Close closed QueuedOutput. Unused QueuedOutput must be closed for freeing resources.
-func (q *QueuedOutput) Close() {
+func (q *QueuedOutput) Close() error {
 	q.ctxCancel()
+	return nil
 }
 
 // Log is implementation of Output.
