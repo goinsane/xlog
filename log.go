@@ -150,7 +150,7 @@ func (l *Log) Format(f fmt.State, verb rune) {
 		}
 
 		if l.Flags&FlagStackTrace != 0 && l.StackTrace != nil {
-			buf.WriteString(fmt.Sprintf("%+1.1v", l.StackTrace))
+			buf.WriteString(fmt.Sprintf("%+1.1s", l.StackTrace))
 			buf.WriteRune('\n')
 		}
 	default:

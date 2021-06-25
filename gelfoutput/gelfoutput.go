@@ -89,7 +89,7 @@ func (g *GelfOutput) Log(log *xlog.Log) {
 	if log.Error != nil {
 		format := "%v"
 		if _, ok := log.Error.(*erf.Erf); ok {
-			format = "%+v"
+			format = "%+s"
 		}
 		msg.Extra["error"] = fmt.Sprintf(format, log.Error)
 	}
