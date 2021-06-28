@@ -90,7 +90,7 @@ func (g *GelfOutput) Log(log *xlog.Log) {
 	if log.Error != nil {
 		format := "%v"
 		if _, ok := log.Error.(*erf.Erf); ok {
-			format = "%+s"
+			format = "%+v"
 		}
 		msg.Extra["error"] = fmt.Sprintf(format, log.Error)
 	}
@@ -98,7 +98,7 @@ func (g *GelfOutput) Log(log *xlog.Log) {
 	msg.Extra["line"] = log.StackCaller.Line
 	msg.Extra["func"] = log.StackCaller.Function
 	if log.StackTrace != nil {
-		msg.Extra["stack_trace"] = fmt.Sprintf("%+s", log.StackTrace)
+		msg.Extra["stack_trace"] = fmt.Sprintf("%+v", log.StackTrace)
 	}
 	for i := range log.Fields {
 		field := &log.Fields[i]
