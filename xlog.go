@@ -2,310 +2,220 @@
 package xlog
 
 import (
-	"bytes"
-	"fmt"
-	"go/build"
 	"io"
 	"os"
-	"runtime"
-	"strings"
 	"time"
+
+	"github.com/goinsane/erf"
 )
-
-// Verbose is type of verbose level.
-type Verbose int
-
-// Field is type of field.
-type Field struct {
-	Key string
-	Val interface{}
-}
-
-// Fields is type of fields.
-type Fields []Field
-
-// Clone clones Fields.
-func (f Fields) Clone() Fields {
-	if f == nil {
-		return nil
-	}
-	result := make(Fields, 0, len(f))
-	for i := range f {
-		result = append(result, f[i])
-	}
-	return result
-}
-
-// Len is implementation of sort.Interface
-func (f Fields) Len() int {
-	return len(f)
-}
-
-// Less is implementation of sort.Interface
-func (f Fields) Less(i, j int) bool {
-	return strings.Compare(f[i].Key, f[j].Key) < 0
-}
-
-// Swap is implementation of sort.Interface
-func (f Fields) Swap(i, j int) {
-	f[i], f[j] = f[j], f[i]
-}
-
-// Callers is a type of stack callers.
-type Callers []uintptr
-
-func (c Callers) Clone() Callers {
-	if c == nil {
-		return nil
-	}
-	result := make(Callers, 0, len(c))
-	for i := range c {
-		result = append(result, c[i])
-	}
-	return result
-}
-
-// ToStackTrace generates stack trace output from stack callers.
-func (c Callers) ToStackTrace(padding []byte) []byte {
-	frames := runtime.CallersFrames(c)
-	buf := bytes.NewBuffer(make([]byte, 0, 128))
-	for {
-		frame, more := frames.Next()
-		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("%s()\n", trimSrcpath(frame.Function)))
-		buf.Write(padding)
-		buf.WriteString(fmt.Sprintf("\t%s:%d\n", trimSrcpath(frame.File), frame.Line))
-		if !more {
-			break
-		}
-	}
-	return buf.Bytes()
-}
 
 var (
-	defLogger *Logger     = New(defOutput, SeverityInfo, 0)
-	defOutput *TextOutput = NewTextOutput(os.Stderr, OutputFlagDefault)
+	defaultLogger       = New(defaultOutput, SeverityInfo, 0)
+	defaultOutput       = NewTextOutput(defaultOutputWriter)
+	defaultOutputWriter = os.Stderr
+	defaultPCSize       = erf.DefaultPCSize
 )
 
-func itoa(buf *[]byte, i int, wid int) {
-	var b [20]byte
-	bp := len(b) - 1
-	for i >= 10 || wid > 1 {
-		wid--
-		q := i / 10
-		b[bp] = byte('0' + i - q*10)
-		bp--
-		i = q
-	}
-	b[bp] = byte('0' + i)
-	*buf = append(*buf, b[bp:]...)
-}
-
-func trimSrcpath(s string) string {
-	var r string
-	r = strings.TrimPrefix(s, build.Default.GOROOT+"/src/")
-	if r != s {
-		return r
-	}
-	r = strings.TrimPrefix(s, build.Default.GOPATH+"/src/")
-	if r != s {
-		return r
-	}
-	return s
-}
-
-func trimDirs(s string) string {
-	for i := len(s) - 1; i > 0; i-- {
-		if s[i] == '/' {
-			return s[i+1:]
-		}
-	}
-	return s
-}
-
-// DefaultLogger returns the default logger.
+// DefaultLogger returns the default Logger.
 func DefaultLogger() *Logger {
-	return defLogger
+	return defaultLogger
 }
 
-// DefaultOutput returns the default output as Output. Type of default output is TextOutput.
-func DefaultOutput() Output {
-	return defOutput
+// DefaultOutput returns the default Output as TextOutput type.
+func DefaultOutput() *TextOutput {
+	return defaultOutput
 }
 
-// Fatal logs to the FATAL severity logs to the default logger, then calls os.Exit(1).
+// Fatal logs to the FATAL severity logs to the default Logger, then calls os.Exit(1).
 func Fatal(args ...interface{}) {
-	defLogger.log(SeverityFatal, args...)
+	defaultLogger.log(SeverityFatal, args...)
 	os.Exit(1)
 }
 
-// Fatalf logs to the FATAL severity logs to the default logger, then calls os.Exit(1).
+// Fatalf logs to the FATAL severity logs to the default Logger, then calls os.Exit(1).
 func Fatalf(format string, args ...interface{}) {
-	defLogger.logf(SeverityFatal, format, args...)
+	defaultLogger.logf(SeverityFatal, format, args...)
 	os.Exit(1)
 }
 
-// Fatalln logs to the FATAL severity logs to the default logger, then calls os.Exit(1).
+// Fatalln logs to the FATAL severity logs to the default Logger, then calls os.Exit(1).
 func Fatalln(args ...interface{}) {
-	defLogger.logln(SeverityFatal, args...)
+	defaultLogger.logln(SeverityFatal, args...)
 	os.Exit(1)
 }
 
-// Error logs to the ERROR severity logs to the default logger.
+// Error logs to the ERROR severity logs to the default Logger.
 func Error(args ...interface{}) {
-	defLogger.log(SeverityError, args...)
+	defaultLogger.log(SeverityError, args...)
 }
 
-// Errorf logs to the ERROR severity logs to the default logger.
+// Errorf logs to the ERROR severity logs to the default Logger.
 func Errorf(format string, args ...interface{}) {
-	defLogger.logf(SeverityError, format, args...)
+	defaultLogger.logf(SeverityError, format, args...)
 }
 
-// Errorln logs to the ERROR severity logs to the default logger.
+// Errorln logs to the ERROR severity logs to the default Logger.
 func Errorln(args ...interface{}) {
-	defLogger.logln(SeverityError, args...)
+	defaultLogger.logln(SeverityError, args...)
 }
 
-// Warning logs to the WARNING severity logs to the default logger.
+// Warning logs to the WARNING severity logs to the default Logger.
 func Warning(args ...interface{}) {
-	defLogger.log(SeverityWarning, args...)
+	defaultLogger.log(SeverityWarning, args...)
 }
 
-// Warningf logs to the WARNING severity logs to the default logger.
+// Warningf logs to the WARNING severity logs to the default Logger.
 func Warningf(format string, args ...interface{}) {
-	defLogger.logf(SeverityWarning, format, args...)
+	defaultLogger.logf(SeverityWarning, format, args...)
 }
 
-// Warningln logs to the WARNING severity logs to the default logger.
+// Warningln logs to the WARNING severity logs to the default Logger.
 func Warningln(args ...interface{}) {
-	defLogger.logln(SeverityWarning, args...)
+	defaultLogger.logln(SeverityWarning, args...)
 }
 
-// Info logs to the INFO severity logs to the default logger.
+// Info logs to the INFO severity logs to the default Logger.
 func Info(args ...interface{}) {
-	defLogger.log(SeverityInfo, args...)
+	defaultLogger.log(SeverityInfo, args...)
 }
 
-// Infof logs to the INFO severity logs to the default logger.
+// Infof logs to the INFO severity logs to the default Logger.
 func Infof(format string, args ...interface{}) {
-	defLogger.logf(SeverityInfo, format, args...)
+	defaultLogger.logf(SeverityInfo, format, args...)
 }
 
-// Infoln logs to the INFO severity logs to the default logger.
+// Infoln logs to the INFO severity logs to the default Logger.
 func Infoln(args ...interface{}) {
-	defLogger.logln(SeverityInfo, args...)
+	defaultLogger.logln(SeverityInfo, args...)
 }
 
-// Debug logs to the DEBUG severity logs to the default logger.
+// Debug logs to the DEBUG severity logs to the default Logger.
 func Debug(args ...interface{}) {
-	defLogger.log(SeverityDebug, args...)
+	defaultLogger.log(SeverityDebug, args...)
 }
 
-// Debugf logs to the DEBUG severity logs to the default logger.
+// Debugf logs to the DEBUG severity logs to the default Logger.
 func Debugf(format string, args ...interface{}) {
-	defLogger.logf(SeverityDebug, format, args...)
+	defaultLogger.logf(SeverityDebug, format, args...)
 }
 
-// Debugln logs to the DEBUG severity logs to the default logger.
+// Debugln logs to the DEBUG severity logs to the default Logger.
 func Debugln(args ...interface{}) {
-	defLogger.logln(SeverityDebug, args...)
+	defaultLogger.logln(SeverityDebug, args...)
 }
 
-// Print logs to the default logger.
+// Print logs a log which has the default Logger's print severity to the default Logger.
 func Print(args ...interface{}) {
-	defLogger.log(defLogger.printSeverity, args...)
+	defaultLogger.log(defaultLogger.printSeverity, args...)
 }
 
-// Printf logs to the default logger.
+// Printf logs a log which has the default Logger's print severity to the default Logger.
 func Printf(format string, args ...interface{}) {
-	defLogger.logf(defLogger.printSeverity, format, args...)
+	defaultLogger.logf(defaultLogger.printSeverity, format, args...)
 }
 
-// Println logs to the default logger.
+// Println logs a log which has the default Logger's print severity to the default Logger.
 func Println(args ...interface{}) {
-	defLogger.logln(defLogger.printSeverity, args...)
+	defaultLogger.logln(defaultLogger.printSeverity, args...)
 }
 
-// SetOutput sets the default logger's output. By default, the default output.
-func SetOutput(out Output) {
-	defLogger.SetOutput(out)
+// SetOutput sets the default Logger's output.
+// It returns the default Logger.
+// By default, the default Output.
+func SetOutput(output Output) *Logger {
+	return defaultLogger.SetOutput(output)
 }
 
-// SetSeverity sets the default logger's severity. If severity is invalid, it sets SeverityInfo.
+// SetSeverity sets the default Logger's severity.
+// If severity is invalid, it sets SeverityInfo.
+// It returns the default Logger.
 // By default, SeverityInfo.
-func SetSeverity(severity Severity) {
-	defLogger.SetSeverity(severity)
+func SetSeverity(severity Severity) *Logger {
+	return defaultLogger.SetSeverity(severity)
 }
 
-// SetVerbose sets the default logger's verbose. By default, 0.
-func SetVerbose(verbose Verbose) {
-	defLogger.SetVerbose(verbose)
+// SetVerbose sets the default Logger's verbose.
+// It returns the default Logger.
+// By default, 0.
+func SetVerbose(verbose Verbose) *Logger {
+	return defaultLogger.SetVerbose(verbose)
 }
 
-// SetPrintSeverity sets the default logger's severity level which is using with Print functions.
-// If printSeverity is invalid, it sets SeverityInfo. By default, SeverityInfo.
-func SetPrintSeverity(printSeverity Severity) {
-	defLogger.SetPrintSeverity(printSeverity)
+// SetFlags sets the default Logger's flags.
+// It returns the default Logger.
+// By default, FlagDefault.
+func SetFlags(flags Flag) *Logger {
+	return defaultLogger.SetFlags(flags)
 }
 
-// SetStackTraceSeverity sets the default logger's severity level which allows printing stack trace.
-// If stackTraceSeverity is invalid, it sets SeverityNone. By default, SeverityNone.
-func SetStackTraceSeverity(stackTraceSeverity Severity) {
-	defLogger.SetStackTraceSeverity(stackTraceSeverity)
+// SetPrintSeverity sets the default Logger's severity level which is using with Print methods.
+// If printSeverity is invalid, it sets SeverityInfo.
+// It returns the default Logger.
+// By default, SeverityInfo.
+func SetPrintSeverity(printSeverity Severity) *Logger {
+	return defaultLogger.SetPrintSeverity(printSeverity)
 }
 
-// V clones the default logger if Logger's verbose is greater or equal than given verbosity. Otherwise returns nil.
+// SetStackTraceSeverity sets the default Logger's severity level which allows printing stack trace.
+// If stackTraceSeverity is invalid, it sets SeverityNone.
+// It returns the default Logger.
+// By default, SeverityNone.
+func SetStackTraceSeverity(stackTraceSeverity Severity) *Logger {
+	return defaultLogger.SetStackTraceSeverity(stackTraceSeverity)
+}
+
+// V duplicates the default Logger if the default Logger's verbose is greater or equal to given verbosity. Otherwise returns nil.
 func V(verbosity Verbose) *Logger {
-	return defLogger.V(verbosity)
+	return defaultLogger.V(verbosity)
 }
 
-// WithPrefix clones the default Logger and adds given prefix to end of the underlying prefix.
+// WithPrefix duplicates the default Logger and adds given prefix to end of the underlying prefix.
 func WithPrefix(args ...interface{}) *Logger {
-	return defLogger.WithPrefix(args...)
+	return defaultLogger.WithPrefix(args...)
 }
 
-// WithPrefixf clones the default Logger and adds given prefix to end of the underlying prefix.
+// WithPrefixf duplicates the default Logger and adds given prefix to end of the underlying prefix.
 func WithPrefixf(format string, args ...interface{}) *Logger {
-	return defLogger.WithPrefixf(format, args...)
+	return defaultLogger.WithPrefixf(format, args...)
 }
 
-// WithTime clones the default logger with given time.
+// WithTime duplicates the default Logger with given time.
 func WithTime(tm time.Time) *Logger {
-	return defLogger.WithTime(tm)
+	return defaultLogger.WithTime(tm)
 }
 
-// WithFields clones the default logger with given fields.
+// WithFields duplicates the default Logger with given fields.
 func WithFields(fields ...Field) *Logger {
-	return defLogger.WithFields(fields...)
+	return defaultLogger.WithFields(fields...)
 }
 
-// WithFieldKeyVals clones default logger with given key and values of Field.
+// WithFieldKeyVals duplicates the default Logger with given key and values of Field.
 func WithFieldKeyVals(kvs ...interface{}) *Logger {
-	return defLogger.WithFieldKeyVals(kvs...)
+	return defaultLogger.WithFieldKeyVals(kvs...)
 }
 
-// SetOutputWriter sets the default output writer.
-func SetOutputWriter(w io.Writer) {
-	defOutput.SetWriter(w)
+// SetOutputWriter sets the default Output's writer.
+// It returns the default Output as TextOutput type.
+// By default, os.Stderr.
+func SetOutputWriter(w io.Writer) *TextOutput {
+	return defaultOutput.SetWriter(w)
 }
 
-// SetOutputFlags sets the default output flags.
-func SetOutputFlags(flags OutputFlag) {
-	defOutput.SetFlags(flags)
+// SetOutputFlags sets the default Output's flags to override every single Log.Flags if the flags argument different than 0.
+// It returns the default Output as TextOutput type.
+// By default, 0.
+func SetOutputFlags(flags Flag) *TextOutput {
+	return defaultOutput.SetFlags(flags)
 }
 
-// SetOutputPadding sets custom padding of the default output. If padding is empty-string, padding is filled by first line of log.
-func SetOutputPadding(padding string) {
-	defOutput.SetPadding(padding)
-}
-
-// Reset resets default logger and output options.
+// Reset resets the default Logger and the default Output.
 func Reset() {
-	SetOutput(defOutput)
+	SetOutput(defaultOutput)
 	SetSeverity(SeverityInfo)
 	SetVerbose(0)
+	SetFlags(FlagDefault)
 	SetPrintSeverity(SeverityInfo)
 	SetStackTraceSeverity(SeverityNone)
-	SetOutputWriter(os.Stderr)
-	SetOutputFlags(OutputFlagDefault)
+	SetOutputWriter(defaultOutputWriter)
+	SetOutputFlags(0)
 }

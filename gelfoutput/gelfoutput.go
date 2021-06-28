@@ -1,116 +1,69 @@
-// Package gelfoutput provides GELF output implementation of xlog.Output
+// Package gelfoutput provides GELF output implementation of xlog.Output.
 package gelfoutput
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/goinsane/erf"
 	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 
 	"github.com/goinsane/xlog"
 )
 
-// GelfWriterType defines type of GELF writer.
-type GelfWriterType int
-
-// IsValid checks GelfWriterType value is valid.
-func (t GelfWriterType) IsValid() bool {
-	return t >= GelfWriterTypeUDP && t <= GelfWriterTypeTCP
-}
-
-const (
-	GelfWriterTypeUDP = iota
-	GelfWriterTypeTCP
-)
-
-type gelfWriter interface {
-	Write(p []byte) (n int, err error)
-	WriteMessage(m *gelf.Message) (err error)
-	Close() error
-}
-
-func newGelfWriter(writerType GelfWriterType, addr string) (w gelfWriter, err error) {
-	switch writerType {
-	case GelfWriterTypeUDP:
-		var gw *gelf.UDPWriter
-		gw, err = gelf.NewUDPWriter(addr)
-		if err != nil {
-			return
-		}
-		w = gw
-	case GelfWriterTypeTCP:
-		var gw *gelf.TCPWriter
-		gw, err = gelf.NewTCPWriter(addr)
-		if err != nil {
-			return
-		}
-		gw.MaxReconnect = 0
-		w = gw
-	default:
-		err = ErrUnknownGelfWriterType
-		return
-	}
-	return
-}
-
-// GelfOptions defines several GELF options.
-type GelfOptions struct {
-	Host     string
-	Facility string
-}
-
 // GelfOutput implements xlog.Output for GELF output.
 type GelfOutput struct {
-	mu         sync.Mutex
-	ctx        context.Context
-	ctxCancel  context.CancelFunc
-	writerType GelfWriterType
-	addr       string
-	opts       GelfOptions
-	writer     gelfWriter
+	opts      Options
+	ctx       context.Context
+	ctxCancel context.CancelFunc
+	mu        sync.Mutex
+	writer    gelf.Writer
 }
 
-// NewGelfOutput creates a new GelfOutput.
-func NewGelfOutput(writerType GelfWriterType, addr string, opts GelfOptions) (o *GelfOutput, err error) {
-	if !writerType.IsValid() {
-		err = ErrUnknownGelfWriterType
-		return
+// New creates a new GelfOutput.
+func New(opts Options) (g *GelfOutput, err error) {
+	g = &GelfOutput{
+		opts: opts,
 	}
-	o = &GelfOutput{
-		writerType: writerType,
-		addr:       addr,
-		opts:       opts,
+	if g.opts.Host == "" {
+		h, e := os.Hostname()
+		if e != nil {
+			return nil, erf.Errorf("unable to get hostname: %w", e)
+		}
+		g.opts.Host = h
 	}
-	if o.opts.Host == "" {
-		osHostname, _ := os.Hostname()
-		o.opts.Host = osHostname
-	}
-	o.ctx, o.ctxCancel = context.WithCancel(context.Background())
-	return
+	g.ctx, g.ctxCancel = context.WithCancel(context.Background())
+	return g, nil
 }
 
 // Close closes GelfOutput. Unused GelfOutput must be closed for freeing resources.
-func (o *GelfOutput) Close() {
-	o.ctxCancel()
-	o.mu.Lock()
-	if o.writer != nil {
-		o.writer.Close()
-		o.writer = nil
+func (g *GelfOutput) Close() error {
+	var err error
+	g.ctxCancel()
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.writer != nil {
+		if e := g.writer.Close(); e != nil {
+			if err == nil {
+				err = erf.Errorf("unable to close writer: %w", e)
+			}
+		} else {
+			g.writer = nil
+		}
 	}
-	o.mu.Unlock()
+	return err
 }
 
-// Log is implementation of Output interface.
-func (o *GelfOutput) Log(msg *xlog.Message) {
-	select {
-	case <-o.ctx.Done():
+// Log is implementation of xlog.Output.
+func (g *GelfOutput) Log(log *xlog.Log) {
+	if g.ctx.Err() != nil {
 		return
-	default:
 	}
 	level := int32(gelf.LOG_EMERG)
-	switch msg.Severity {
+	switch log.Severity {
 	case xlog.SeverityFatal:
 		level = gelf.LOG_CRIT
 	case xlog.SeverityError:
@@ -122,61 +75,67 @@ func (o *GelfOutput) Log(msg *xlog.Message) {
 	case xlog.SeverityDebug:
 		level = gelf.LOG_DEBUG
 	}
-	m := &gelf.Message{
+	msg := &gelf.Message{
 		Version:  "1.1",
-		Host:     o.opts.Host,
-		Short:    string(msg.Msg),
+		Host:     g.opts.Host,
+		Short:    string(log.Message),
 		Full:     "",
-		TimeUnix: float64(msg.Tm.UnixNano()) / float64(time.Second),
+		TimeUnix: float64(log.Time.UnixNano()) / float64(time.Second),
 		Level:    level,
-		Facility: o.opts.Facility,
+		Facility: g.opts.Facility,
 		Extra:    make(map[string]interface{}),
 	}
-	m.Extra["severity"] = msg.Severity.String()
-	m.Extra["verbosity"] = msg.Verbosity
-	m.Extra["file"] = msg.File
-	m.Extra["line"] = msg.Line
-	m.Extra["func"] = msg.Func
-	if msg.Callers != nil {
-		m.Extra["stacktrace"] = string(msg.Callers.ToStackTrace(nil))
+	msg.Extra["severity"] = fmt.Sprintf("%s", log.Severity)
+	msg.Extra["verbosity"] = int(log.Verbosity)
+	if log.Error != nil {
+		format := "%v"
+		if _, ok := log.Error.(*erf.Erf); ok {
+			format = "%+v"
+		}
+		msg.Extra["error"] = fmt.Sprintf(format, log.Error)
 	}
-	for i := range msg.Fields {
-		field := &msg.Fields[i]
-		key := "_" + field.Key
-		/*for {
-			_, ok := m.Extra[key]
-			if !ok {
-				break
-			}
-			key = "_" + key
-		}*/
-		m.Extra[key] = field.Val
+	msg.Extra["file"] = log.StackCaller.File
+	msg.Extra["line"] = log.StackCaller.Line
+	msg.Extra["func"] = log.StackCaller.Function
+	if log.StackTrace != nil {
+		msg.Extra["stack_trace"] = fmt.Sprintf("%+v", log.StackTrace)
 	}
-	o.mu.Lock()
-	o.writeMessage(m)
-	o.mu.Unlock()
+	for i := range log.Fields {
+		field := &log.Fields[i]
+		msg.Extra[fmt.Sprintf("%10.0d_%s", i, field.Key)] = field.Value
+	}
+	g.writeMessage(msg)
 }
 
-func (o *GelfOutput) writeMessage(m *gelf.Message) {
-	for {
-		select {
-		case <-o.ctx.Done():
-			return
-		default:
-		}
-		var e error
-		if o.writer == nil {
-			o.writer, e = newGelfWriter(o.writerType, o.addr)
-			if e != nil {
-				o.writer = nil
-				time.Sleep(250 * time.Millisecond)
-				continue
+func (g *GelfOutput) writeMessage(msg *gelf.Message) {
+	var err error
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	for g.ctx.Err() == nil {
+		if g.writer == nil {
+			if !g.opts.UseTCP {
+				var w *gelf.UDPWriter
+				w, err = gelf.NewUDPWriter(g.opts.Address)
+				if err != nil {
+					time.Sleep(250 * time.Millisecond)
+					continue
+				}
+				g.writer = w
+			} else {
+				var w *gelf.TCPWriter
+				w, err = gelf.NewTCPWriter(g.opts.Address)
+				if err != nil {
+					time.Sleep(250 * time.Millisecond)
+					continue
+				}
+				w.MaxReconnect = 0
+				w.ReconnectDelay = 1
+				g.writer = w
 			}
 		}
-		e = o.writer.WriteMessage(m)
-		if e != nil {
-			o.writer.Close()
-			o.writer = nil
+		if err = g.writer.WriteMessage(msg); err != nil {
+			_ = g.writer.Close()
+			g.writer = nil
 			time.Sleep(250 * time.Millisecond)
 			continue
 		}

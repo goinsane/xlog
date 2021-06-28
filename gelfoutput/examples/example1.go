@@ -1,3 +1,5 @@
+// +build ignore
+
 package main
 
 import (
@@ -12,12 +14,19 @@ import (
 )
 
 func main() {
-	var addr string
-	flag.StringVar(&addr, "a", "127.0.0.1:12201", "graylog address")
+	var address string
+	var useTCP bool
+	flag.StringVar(&address, "a", "127.0.0.1:12201", "graylog address")
+	flag.BoolVar(&useTCP, "t", false, "use tcp")
 	flag.Parse()
 
+	xlog.SetOutputWriter(os.Stdout)
+
 	var err error
-	gelfOutput, err := gelfoutput.NewGelfOutput(gelfoutput.GelfWriterTypeTCP, addr, gelfoutput.GelfOptions{})
+	gelfOutput, err := gelfoutput.New(gelfoutput.Options{
+		Address: address,
+		UseTCP:  useTCP,
+	})
 	if err != nil {
 		xlog.Fatal(err)
 	}
@@ -25,7 +34,7 @@ func main() {
 
 	queuedOutput := xlog.NewQueuedOutput(gelfOutput, 10)
 	defer queuedOutput.Close()
-	queuedOutput.RegisterOnQueueFull(func() {
+	queuedOutput.SetOnQueueFull(func() {
 		xlog.Error("queue full")
 	})
 

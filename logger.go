@@ -3,130 +3,123 @@ package xlog
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"sync"
 	"time"
+
+	"github.com/goinsane/erf"
 )
-
-// Message carries log message.
-type Message struct {
-	Msg       []byte
-	Severity  Severity
-	Verbosity Verbose
-	Tm        time.Time
-	Caller    uintptr
-	Func      string
-	File      string
-	Line      int
-	Fields    Fields
-	Callers   Callers
-}
-
-// Clone clones Message.
-func (msg *Message) Clone() *Message {
-	if msg == nil {
-		return nil
-	}
-	result := &Message{}
-	*result = *msg
-	result.Msg = make([]byte, len(msg.Msg))
-	copy(result.Msg, msg.Msg)
-	result.Fields = msg.Fields.Clone()
-	result.Callers = msg.Callers.Clone()
-	return result
-}
 
 // Logger provides a logger for leveled and structured logging.
 type Logger struct {
 	mu                 sync.RWMutex
-	out                Output
+	output             Output
 	severity           Severity
 	verbose            Verbose
+	flags              Flag
 	printSeverity      Severity
 	stackTraceSeverity Severity
 	prefix             string
 	verbosity          Verbose
-	tm                 time.Time
+	time               time.Time
 	fields             Fields
 }
 
 // New creates a new Logger. If severity is invalid, it sets SeverityInfo.
-func New(out Output, severity Severity, verbose Verbose) *Logger {
+func New(output Output, severity Severity, verbose Verbose) *Logger {
 	if !severity.IsValid() {
 		severity = SeverityInfo
 	}
 	return &Logger{
-		out:                out,
+		output:             output,
 		severity:           severity,
 		verbose:            verbose,
+		flags:              FlagDefault,
 		printSeverity:      SeverityInfo,
 		stackTraceSeverity: SeverityNone,
 	}
 }
 
-func (l *Logger) clone() *Logger {
+// Duplicate duplicates the Logger.
+func (l *Logger) Duplicate() *Logger {
 	l.mu.RLock()
-	ln := &Logger{
-		out:                l.out,
+	defer l.mu.RUnlock()
+	l2 := &Logger{
+		output:             l.output,
 		severity:           l.severity,
 		verbose:            l.verbose,
 		printSeverity:      l.printSeverity,
 		stackTraceSeverity: l.stackTraceSeverity,
 		prefix:             l.prefix,
 		verbosity:          l.verbosity,
-		tm:                 l.tm,
-		fields:             l.fields.Clone(),
+		time:               l.time,
+		fields:             l.fields.Duplicate(),
+		flags:              l.flags,
 	}
-	l.mu.RUnlock()
-	return ln
+	return l2
 }
 
-func (l *Logger) output(severity Severity, message string) {
+func (l *Logger) out(severity Severity, message string, err error) {
 	if l == nil {
 		return
 	}
 	l.mu.RLock()
-	if l.out != nil && l.severity >= severity && l.verbose >= l.verbosity {
-		msg := &Message{}
+	defer l.mu.RUnlock()
+	if l.output != nil && l.severity >= severity && l.verbose >= l.verbosity {
 		messageLen := len(l.prefix) + len(message)
-		msg.Msg = make([]byte, 0, messageLen+1)
-		msg.Msg = append(msg.Msg, l.prefix...)
-		msg.Msg = append(msg.Msg, message...)
-		if messageLen == 0 || msg.Msg[messageLen-1] != '\n' {
-			msg.Msg = append(msg.Msg, '\n')
+		log := &Log{
+			Message:   make([]byte, 0, messageLen),
+			Error:     err,
+			Severity:  severity,
+			Verbosity: l.verbosity,
+			Time:      l.time,
+			Fields:    l.fields.Duplicate(),
+			Flags:     l.flags,
 		}
-		msg.Severity = severity
-		msg.Verbosity = l.verbosity
-		msg.Tm = l.tm
-		if msg.Tm.IsZero() {
-			msg.Tm = time.Now()
+		log.Message = append(log.Message, l.prefix...)
+		log.Message = append(log.Message, message...)
+		if messageLen != 0 && log.Message[messageLen-1] == '\n' {
+			log.Message = log.Message[:messageLen-1]
 		}
-		msg.Caller, _, _, _ = runtime.Caller(3)
-		if f := runtime.FuncForPC(msg.Caller); f != nil {
-			msg.Func = trimSrcpath(f.Name())
-			msg.File, msg.Line = f.FileLine(msg.Caller)
-			msg.File = trimSrcpath(msg.File)
+		if log.Time.IsZero() {
+			log.Time = time.Now()
 		}
-		msg.Fields = l.fields.Clone()
+		log.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
 		if l.stackTraceSeverity >= severity {
-			msg.Callers = make(Callers, 32)
-			msg.Callers = msg.Callers[:runtime.Callers(4, msg.Callers)]
+			log.StackTrace = erf.NewStackTrace(erf.PC(defaultPCSize, 5)...)
 		}
-		l.out.Log(msg)
+		l.output.Log(log)
 	}
-	l.mu.RUnlock()
 }
 
 func (l *Logger) log(severity Severity, args ...interface{}) {
-	l.output(severity, fmt.Sprint(args...))
+	var err error
+	for _, arg := range args {
+		if e, ok := arg.(error); ok {
+			err = e
+			break
+		}
+	}
+	l.out(severity, fmt.Sprint(args...), err)
 }
 
 func (l *Logger) logf(severity Severity, format string, args ...interface{}) {
-	l.output(severity, fmt.Sprintf(format, args...))
+	var err error
+	wErr := fmt.Errorf(format, args...)
+	if e, ok := wErr.(erf.WrappedError); ok {
+		err = e.Unwrap()
+	}
+	l.out(severity, wErr.Error(), err)
 }
 
 func (l *Logger) logln(severity Severity, args ...interface{}) {
-	l.output(severity, fmt.Sprintln(args...))
+	var err error
+	for _, arg := range args {
+		if e, ok := arg.(error); ok {
+			err = e
+			break
+		}
+	}
+	l.out(severity, fmt.Sprintln(args...), err)
 }
 
 // Fatal logs to the FATAL severity logs, then calls os.Exit(1).
@@ -207,7 +200,7 @@ func (l *Logger) Debugln(args ...interface{}) {
 	l.logln(SeverityDebug, args...)
 }
 
-// Print logs to logs has Logger's print severity.
+// Print logs a log which has the Logger's print severity.
 func (l *Logger) Print(args ...interface{}) {
 	if l == nil {
 		return
@@ -215,7 +208,7 @@ func (l *Logger) Print(args ...interface{}) {
 	l.log(l.printSeverity, args...)
 }
 
-// Printf logs to logs has Logger's print severity.
+// Printf logs a log which has the Logger's print severity.
 func (l *Logger) Printf(format string, args ...interface{}) {
 	if l == nil {
 		return
@@ -223,7 +216,7 @@ func (l *Logger) Printf(format string, args ...interface{}) {
 	l.logf(l.printSeverity, format, args...)
 }
 
-// Println logs to logs has Logger's print severity.
+// Println logs a log which has the Logger's print severity.
 func (l *Logger) Println(args ...interface{}) {
 	if l == nil {
 		return
@@ -232,67 +225,93 @@ func (l *Logger) Println(args ...interface{}) {
 }
 
 // SetOutput sets the Logger's output.
-func (l *Logger) SetOutput(out Output) {
+// It returns underlying Logger.
+func (l *Logger) SetOutput(output Output) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
-	l.out = out
-	l.mu.Unlock()
+	defer l.mu.Unlock()
+	l.output = output
+	return l
 }
 
-// SetSeverity sets the Logger's severity. If severity is invalid, it sets SeverityInfo.
-func (l *Logger) SetSeverity(severity Severity) {
+// SetSeverity sets the Logger's severity.
+// If severity is invalid, it sets SeverityInfo.
+// It returns underlying Logger.
+func (l *Logger) SetSeverity(severity Severity) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	if !severity.IsValid() {
 		severity = SeverityInfo
 	}
 	l.severity = severity
-	l.mu.Unlock()
+	return l
 }
 
 // SetVerbose sets the Logger's verbose.
-func (l *Logger) SetVerbose(verbose Verbose) {
+// It returns underlying Logger.
+func (l *Logger) SetVerbose(verbose Verbose) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	l.verbose = verbose
-	l.mu.Unlock()
+	return l
+}
+
+// SetFlags sets the Logger's flags.
+// It returns underlying Logger.
+// By default, FlagDefault.
+func (l *Logger) SetFlags(flags Flag) *Logger {
+	if l == nil {
+		return nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.flags = flags
+	return l
 }
 
 // SetPrintSeverity sets the Logger's severity level which is using with Print methods.
-// If printSeverity is invalid, it sets SeverityInfo. By default, SeverityInfo.
-func (l *Logger) SetPrintSeverity(printSeverity Severity) {
+// If printSeverity is invalid, it sets SeverityInfo.
+// It returns underlying Logger.
+// By default, SeverityInfo.
+func (l *Logger) SetPrintSeverity(printSeverity Severity) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	if !printSeverity.IsValid() {
 		printSeverity = SeverityInfo
 	}
 	l.printSeverity = printSeverity
-	l.mu.Unlock()
+	return l
 }
 
 // SetStackTraceSeverity sets the Logger's severity level which allows printing stack trace.
-// If stackTraceSeverity is invalid, it sets SeverityNone. By default, SeverityNone.
-func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) {
+// If stackTraceSeverity is invalid, it sets SeverityNone.
+// It returns underlying Logger.
+// By default, SeverityNone.
+func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) *Logger {
 	if l == nil {
-		return
+		return nil
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	if !stackTraceSeverity.IsValid() {
 		stackTraceSeverity = SeverityNone
 	}
 	l.stackTraceSeverity = stackTraceSeverity
-	l.mu.Unlock()
+	return l
 }
 
-// V clones the Logger if Logger's verbose is greater or equal than given verbosity. Otherwise returns nil.
+// V duplicates the Logger if the Logger's verbose is greater or equal to given verbosity. Otherwise returns nil.
 func (l *Logger) V(verbosity Verbose) *Logger {
 	if l == nil {
 		return nil
@@ -300,52 +319,52 @@ func (l *Logger) V(verbosity Verbose) *Logger {
 	if !(l.verbose >= verbosity) {
 		return nil
 	}
-	ln := l.clone()
-	ln.verbosity = verbosity
-	return ln
+	l2 := l.Duplicate()
+	l2.verbosity = verbosity
+	return l2
 }
 
-// WithPrefix clones the Logger and adds given prefix to end of the underlying prefix.
+// WithPrefix duplicates the Logger and adds given prefix to end of the underlying prefix.
 func (l *Logger) WithPrefix(args ...interface{}) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.clone()
-	ln.prefix += fmt.Sprint(args...) + ": "
-	return ln
+	l2 := l.Duplicate()
+	l2.prefix += fmt.Sprint(args...) + ": "
+	return l2
 }
 
-// WithPrefixf clones the Logger and adds given prefix to end of the underlying prefix.
+// WithPrefixf duplicates the Logger and adds given prefix to end of the underlying prefix.
 func (l *Logger) WithPrefixf(format string, args ...interface{}) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.clone()
-	ln.prefix += fmt.Sprintf(format, args...) + ": "
-	return ln
+	l2 := l.Duplicate()
+	l2.prefix += fmt.Sprintf(format, args...) + ": "
+	return l2
 }
 
-// WithTime clones the Logger with given time.
+// WithTime duplicates the Logger with given time.
 func (l *Logger) WithTime(tm time.Time) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.clone()
-	ln.tm = tm
-	return ln
+	l2 := l.Duplicate()
+	l2.time = tm
+	return l2
 }
 
-// WithFields clones the Logger with given fields.
+// WithFields duplicates the Logger with given fields.
 func (l *Logger) WithFields(fields ...Field) *Logger {
 	if l == nil {
 		return nil
 	}
-	ln := l.clone()
-	ln.fields = append(ln.fields, fields...)
-	return ln
+	l2 := l.Duplicate()
+	l2.fields = append(l2.fields, fields...)
+	return l2
 }
 
-// WithFieldKeyVals clones the Logger with given key and values of Field.
+// WithFieldKeyVals duplicates the Logger with given key and values of Field.
 func (l *Logger) WithFieldKeyVals(kvs ...interface{}) *Logger {
 	if l == nil {
 		return nil
@@ -355,19 +374,19 @@ func (l *Logger) WithFieldKeyVals(kvs ...interface{}) *Logger {
 	for i := 0; i < n; i++ {
 		j := i * 2
 		k, v := fmt.Sprintf("%v", kvs[j]), kvs[j+1]
-		fields = append(fields, Field{Key: k, Val: v})
+		fields = append(fields, Field{Key: k, Value: v})
 	}
 	return l.WithFields(fields...)
 }
 
-// WithFieldMap clones the Logger with given fieldMap.
+// WithFieldMap duplicates the Logger with given fieldMap.
 func (l *Logger) WithFieldMap(fieldMap map[string]interface{}) *Logger {
 	if l == nil {
 		return nil
 	}
 	fields := make(Fields, 0, len(fieldMap))
 	for k, v := range fieldMap {
-		fields = append(fields, Field{Key: k, Val: v})
+		fields = append(fields, Field{Key: k, Value: v})
 	}
 	return l.WithFields(fields...)
 }
