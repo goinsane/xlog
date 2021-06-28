@@ -3,7 +3,6 @@ package xlog
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/goinsane/erf"
@@ -56,13 +55,13 @@ func (l *Log) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 's', 'v':
 		if l.Flags&(FlagDate|FlagTime|FlagMicroseconds) != 0 {
-			tm := l.Time
+			tm := l.Time.Local()
 			if l.Flags&FlagUTC != 0 {
 				tm = tm.UTC()
 			}
 			b := make([]byte, 0, 128)
 			if l.Flags&FlagDate != 0 {
-				year, month, day := l.Time.Date()
+				year, month, day := tm.Date()
 				itoa(&b, year, 4)
 				b = append(b, '/')
 				itoa(&b, int(month), 2)
@@ -71,7 +70,7 @@ func (l *Log) Format(f fmt.State, verb rune) {
 				b = append(b, ' ')
 			}
 			if l.Flags&(FlagTime|FlagMicroseconds) != 0 {
-				hour, min, sec := l.Time.Clock()
+				hour, min, sec := tm.Clock()
 				itoa(&b, hour, 2)
 				b = append(b, ':')
 				itoa(&b, min, 2)
@@ -137,10 +136,8 @@ func (l *Log) Format(f fmt.State, verb rune) {
 		}
 
 		if l.Flags&FlagFields != 0 && len(l.Fields) > 0 {
-			fields := l.Fields.Duplicate()
-			sort.Sort(fields)
 			buf.WriteRune('\t')
-			for idx, field := range fields {
+			for idx, field := range l.Fields {
 				if idx > 0 {
 					buf.WriteRune(' ')
 				}
@@ -150,7 +147,7 @@ func (l *Log) Format(f fmt.State, verb rune) {
 		}
 
 		if l.Flags&FlagStackTrace != 0 && l.StackTrace != nil {
-			buf.WriteString(fmt.Sprintf("%+1.1s", l.StackTrace))
+			buf.WriteString(fmt.Sprintf("%+1.1v", l.StackTrace))
 			buf.WriteRune('\n')
 		}
 	default:
