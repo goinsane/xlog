@@ -9,14 +9,14 @@ Please see [godoc](https://pkg.go.dev/github.com/goinsane/xlog).
 
 To run any example, please use the command like the following:
 
-> go run examples/example1.go
+    go run examples/example1.go
 
 ## Tests
 
 To run all tests, please use the following command:
 
-> go test -v
+    go test -v
 
 To run all benchmarks, please use the following command:
 
-> go test -v -run=^Benchmark -bench=.
+    go test -v -run=^Benchmark -bench=.
