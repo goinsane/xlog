@@ -83,7 +83,7 @@ func (g *GelfOutput) Log(log *xlog.Log) {
 		TimeUnix: float64(log.Time.UnixNano()) / float64(time.Second),
 		Level:    level,
 		Facility: g.opts.Facility,
-		Extra:    make(map[string]interface{}),
+		Extra:    make(map[string]interface{}, 128+2*len(log.Fields)),
 	}
 	msg.Extra["severity"] = fmt.Sprintf("%s", log.Severity)
 	msg.Extra["verbosity"] = int(log.Verbosity)
@@ -102,7 +102,8 @@ func (g *GelfOutput) Log(log *xlog.Log) {
 	}
 	for i := range log.Fields {
 		field := &log.Fields[i]
-		msg.Extra[fmt.Sprintf("%10.0d_%s", i, field.Key)] = field.Value
+		msg.Extra[fmt.Sprintf("%3.3d_%s", i, field.Key)] = field.Value
+		msg.Extra[fmt.Sprintf("_%s", field.Key)] = field.Value
 	}
 	g.writeMessage(msg)
 }

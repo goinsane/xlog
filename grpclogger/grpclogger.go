@@ -8,6 +8,6 @@ type GrpcLogger struct {
 	*xlog.Logger
 }
 
-func (g *GrpcLogger) V(l int) bool {
-	return g.Logger.V(xlog.Verbose(l)) != nil
+func (g *GrpcLogger) V(v int) bool {
+	return g.Logger.V(xlog.Verbose(v)) != nil
 }

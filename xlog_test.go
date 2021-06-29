@@ -162,7 +162,7 @@ func ExampleWithTime() {
 	// 2010/11/12 13:14:15 INFO - this is info log, verbosity 0.
 }
 
-func ExampleLogger_test1() {
+func ExampleLogger() {
 	logger := xlog.New(xlog.NewTextOutput(os.Stdout), xlog.SeverityInfo, 2)
 	logger.SetFlags(xlog.FlagSeverity)
 
