@@ -2,6 +2,8 @@ package grpclogger
 
 import (
 	"github.com/goinsane/xlog"
+
+	_ "google.golang.org/grpc/grpclog"
 )
 
 type GrpcLogger struct {
