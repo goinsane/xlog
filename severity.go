@@ -10,7 +10,7 @@ var (
 	ErrUnknownSeverity = erf.New("unknown severity")
 )
 
-// Severity is type of severity level.
+// Severity describes severity level of Log.
 type Severity int
 
 // String is implementation of fmt.Stringer.
@@ -74,21 +74,10 @@ func (s *Severity) UnmarshalText(text []byte) error {
 }
 
 const (
-	// SeverityNone is none or unspecified severity level
-	SeverityNone = Severity(iota)
-
-	// SeverityFatal is fatal severity level
-	SeverityFatal
-
-	// SeverityError is error severity level
-	SeverityError
-
-	// SeverityWarning is warning severity level
-	SeverityWarning
-
-	// SeverityInfo is info severity level
-	SeverityInfo
-
-	// SeverityDebug is debug severity level
-	SeverityDebug
+	SeverityNone    = Severity(iota) // none or unspecified severity level
+	SeverityFatal                    // fatal severity level
+	SeverityError                    // error severity level
+	SeverityWarning                  // warning severity level
+	SeverityInfo                     // info severity level
+	SeverityDebug                    // debug severity level
 )
