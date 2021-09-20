@@ -1,8 +1,11 @@
-// +build ignore
+// +build examples
 
 package main
 
 import (
+	"os"
+	"time"
+
 	"github.com/goinsane/xlog"
 )
 
