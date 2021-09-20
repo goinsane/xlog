@@ -15,7 +15,7 @@ type Severity int
 
 const (
 	// SeverityNone is none or unspecified severity level
-	SeverityNone = Severity(iota)
+	SeverityNone = iota
 
 	// SeverityFatal is fatal severity level
 	SeverityFatal
