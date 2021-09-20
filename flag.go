@@ -1,6 +1,7 @@
 package xlog
 
-// Flag holds single or multiple flogs of Log.
+// Flag holds single or multiple flags of Log.
+// An Output instance uses these flags which are stored by Flag type.
 type Flag int
 
 const (
