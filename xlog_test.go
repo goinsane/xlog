@@ -119,7 +119,7 @@ func BenchmarkLogger_WithFieldKeyVals(b *testing.B) {
 }
 
 func ExampleSetSeverity() {
-	reset()
+	resetForTest()
 	xlog.SetSeverity(xlog.SeverityDebug)
 	xlog.Debug("this is debug log, verbosity 0.")
 	xlog.Info("this is info log, verbosity 0.")
@@ -132,7 +132,7 @@ func ExampleSetSeverity() {
 }
 
 func ExampleSetVerbose() {
-	reset()
+	resetForTest()
 	xlog.SetVerbose(2)
 	xlog.V(0).Debug("this is debug log, verbosity 0. it won't be shown.")
 	xlog.V(1).Info("this is info log, verbosity 1.")
@@ -145,7 +145,7 @@ func ExampleSetVerbose() {
 }
 
 func ExampleSetFlags() {
-	reset()
+	resetForTest()
 	xlog.SetFlags(0)
 	xlog.Info("this is info log, verbosity 0.")
 
@@ -154,7 +154,7 @@ func ExampleSetFlags() {
 }
 
 func ExampleWithTime() {
-	reset()
+	resetForTest()
 	xlog.SetFlags(xlog.FlagDefault)
 	xlog.WithTime(testTime).Info("this is info log, verbosity 0.")
 
@@ -180,8 +180,8 @@ func ExampleLogger() {
 	// ERROR - this is error log, verbosity 2.
 }
 
-func Example_example1() {
-	// reset xlog for previous changes
+func Example_test1() {
+	// reset xlog for previous changes if it is running in go test.
 	xlog.Reset()
 	xlog.SetFlags(xlog.FlagSeverity)
 	xlog.SetOutputWriter(os.Stdout)
@@ -239,9 +239,9 @@ var (
 	testTime, _ = time.ParseInLocation("2006-01-02T15:04:05", "2010-11-12T13:14:15", time.Local)
 )
 
-// reset resets xlog for previous changes
-func reset() {
+// resetForTest resets xlog to run new test.
+func resetForTest() {
 	xlog.Reset()
-	xlog.SetFlags(xlog.FlagDefault & ^xlog.FlagDate & ^xlog.FlagTime)
+	xlog.SetFlags(xlog.FlagDefault & ^xlog.FlagDate & ^xlog.FlagTime & ^xlog.FlagStackTrace)
 	xlog.SetOutputWriter(os.Stdout)
 }
