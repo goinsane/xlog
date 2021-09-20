@@ -10,7 +10,7 @@ var (
 	ErrUnknownSeverity = erf.New("unknown severity")
 )
 
-// Severity is type of severity level.
+// Severity describes severity level of Log.
 type Severity int
 
 const (
