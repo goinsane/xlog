@@ -35,12 +35,15 @@ const (
 	// FlagShortFile prints final file name element and line number: d.go:23
 	FlagShortFile
 
-	// FlagFields prints fields
+	// FlagFields prints fields if there are
 	FlagFields
 
-	// FlagStackTrace prints stack trace
+	// FlagStackTrace prints stack trace if there is
 	FlagStackTrace
 
+	// FlagErfStackTrace prints stack traces of erf error if there are
+	FlagErfStackTrace
+
 	// FlagDefault holds initial flags for the Logger
-	FlagDefault = FlagDate | FlagTime | FlagSeverity | FlagPadding | FlagFields | FlagStackTrace
+	FlagDefault = FlagDate | FlagTime | FlagSeverity | FlagPadding | FlagFields | FlagStackTrace | FlagErfStackTrace
 )
