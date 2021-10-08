@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/goinsane/erf"
 	"github.com/goinsane/xlog"
 )
 
@@ -66,4 +67,15 @@ func main() {
 
 	// WithFieldKeyVals()
 	xlog.WithFieldKeyVals("key1", "val1", "key2", "val2", "key3", "val3", "key1", "val1-2", "key2", "val2-2").Info("this is info log with several fields.")
+
+	// multi-line logs
+	xlog.Info("this is\nmulti-line log with file name")
+	xlog.SetFlags(xlog.FlagDefault)
+	xlog.Info("this is\nmulti-line log")
+	xlog.WithFieldKeyVals("key1", "val1").Info("this is\nmulti-line log with key vals")
+
+	// erf error
+	err1 := erf.New("err1")
+	err2 := erf.Errorf("err2: %w", err1)
+	xlog.WithFieldKeyVals("key1", "val1").Warningf("there is an error: %w", err2)
 }
