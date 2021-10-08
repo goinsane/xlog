@@ -104,9 +104,6 @@ func Example_test1() {
 	xlog.SetFlags(xlog.FlagSeverity | xlog.FlagPadding)
 	xlog.Warning("this is warning log, verbosity 0.\nwith padding.")
 
-	xlog.SetFlags(xlog.FlagSeverity | xlog.FlagPadding | xlog.FlagFields)
-	xlog.WithFieldKeyVals("key1", "val1", "key2", "val2", "key3", "val3", "key1", "val1-2", "key2", "val2-2").Error("this is error log, verbosity 0.\nwith padding.\nwith fields.")
-
 	xlog.SetFlags(xlog.FlagDefault)
 	tm, _ := time.ParseInLocation("2006-01-02T15:04:05", "2019-11-13T21:56:24", time.Local)
 	xlog.WithTime(tm).Info("this is info log, verbosity 0.")
@@ -124,10 +121,6 @@ func Example_test1() {
 	// without padding.
 	// WARNING - this is warning log, verbosity 0.
 	//           with padding.
-	// ERROR - this is error log, verbosity 0.
-	//         with padding.
-	//         with fields.
-	// 	key1="val1" key2="val2" key3="val3" key1="val1-2" key2="val2-2"
 	// 2019/11/13 21:56:24 INFO - this is info log, verbosity 0.
 }
 
