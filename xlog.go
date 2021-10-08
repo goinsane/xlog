@@ -202,7 +202,7 @@ func SetOutputWriter(w io.Writer) *TextOutput {
 	return defaultOutput.SetWriter(w)
 }
 
-// SetOutputFlags sets the default Output's flags to override every single Log.Flags if the flags argument different than 0.
+// SetOutputFlags sets the default Output's flags to override every single Log.Flags if the argument flags different from 0.
 // It returns the default Output as TextOutput type.
 // By default, 0.
 func SetOutputFlags(flags Flag) *TextOutput {
