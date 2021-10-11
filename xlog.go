@@ -141,7 +141,8 @@ func SetVerbose(verbose Verbose) *Logger {
 	return defaultLogger.SetVerbose(verbose)
 }
 
-// SetFlags sets the default Logger's flags.
+// SetFlags sets flags of Log created by the default Logger.
+// These flags don't affect the default Logger. The Logger set them directly into the Log.
 // It returns the default Logger.
 // By default, FlagDefault.
 func SetFlags(flags Flag) *Logger {
@@ -156,7 +157,7 @@ func SetPrintSeverity(printSeverity Severity) *Logger {
 	return defaultLogger.SetPrintSeverity(printSeverity)
 }
 
-// SetStackTraceSeverity sets the default Logger's severity level which allows printing stack trace.
+// SetStackTraceSeverity sets the default Logger's severity level which saves stack trace into Log.
 // If stackTraceSeverity is invalid, it sets SeverityNone.
 // It returns the default Logger.
 // By default, SeverityNone.
@@ -201,7 +202,7 @@ func SetOutputWriter(w io.Writer) *TextOutput {
 	return defaultOutput.SetWriter(w)
 }
 
-// SetOutputFlags sets the default Output's flags to override every single Log.Flags if the flags argument different than 0.
+// SetOutputFlags sets the default Output's flags to override every single Log.Flags if the argument flags different from 0.
 // It returns the default Output as TextOutput type.
 // By default, 0.
 func SetOutputFlags(flags Flag) *TextOutput {

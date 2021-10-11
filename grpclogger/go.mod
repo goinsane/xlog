@@ -6,4 +6,5 @@ replace github.com/goinsane/xlog => ../
 
 require (
 	github.com/goinsane/xlog v0.0.0-00010101000000-000000000000
+	google.golang.org/grpc v1.34.0
 )

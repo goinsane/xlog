@@ -264,7 +264,8 @@ func (l *Logger) SetVerbose(verbose Verbose) *Logger {
 	return l
 }
 
-// SetFlags sets the Logger's flags.
+// SetFlags sets flags of Log created by underlying Logger.
+// These flags don't affect underlying Logger. The Logger set them directly into the Log.
 // It returns underlying Logger.
 // By default, FlagDefault.
 func (l *Logger) SetFlags(flags Flag) *Logger {
@@ -294,7 +295,7 @@ func (l *Logger) SetPrintSeverity(printSeverity Severity) *Logger {
 	return l
 }
 
-// SetStackTraceSeverity sets the Logger's severity level which allows printing stack trace.
+// SetStackTraceSeverity sets the Logger's severity level which saves stack trace into Log.
 // If stackTraceSeverity is invalid, it sets SeverityNone.
 // It returns underlying Logger.
 // By default, SeverityNone.

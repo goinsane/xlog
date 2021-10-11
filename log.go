@@ -135,7 +135,17 @@ func (l *Log) Format(f fmt.State, verb rune) {
 			buf.WriteRune('\n')
 		}
 
+		extended := false
+		extend := func() {
+			if !extended {
+				extended = true
+				buf.WriteString("\t\n")
+			}
+		}
+		erfError, _ := l.Error.(*erf.Erf)
+
 		if l.Flags&FlagFields != 0 && len(l.Fields) > 0 {
+			extend()
 			buf.WriteRune('\t')
 			for idx, field := range l.Fields {
 				if idx > 0 {
@@ -143,13 +153,23 @@ func (l *Log) Format(f fmt.State, verb rune) {
 				}
 				buf.WriteString(fmt.Sprintf("%s=%q", field.Key, fmt.Sprintf("%v", field.Value)))
 			}
+			buf.WriteString("\n\t")
 			buf.WriteRune('\n')
 		}
 
 		if l.Flags&FlagStackTrace != 0 && l.StackTrace != nil {
-			buf.WriteString(fmt.Sprintf("%+1.1v", l.StackTrace))
+			extend()
+			buf.WriteString(fmt.Sprintf("%+1.1s", l.StackTrace))
+			buf.WriteString("\n\t")
 			buf.WriteRune('\n')
 		}
+
+		if l.Flags&FlagErfStackTrace != 0 && erfError != nil {
+			extend()
+			buf.WriteString(fmt.Sprintf("%-1.1x", erfError))
+			buf.WriteRune('\n')
+		}
+
 	default:
 		return
 	}

@@ -1,11 +1,12 @@
 package xlog
 
-// Flag is type of flag.
+// Flag holds single or multiple flags of Log.
+// An Output instance uses these flags which are stored by Flag type.
 type Flag int
 
 const (
 	// FlagDate prints the date in the local time zone: 2009/01/23
-	FlagDate = Flag(1 << iota)
+	FlagDate Flag = 1 << iota
 
 	// FlagTime prints the time in the local time zone: 01:23:23
 	FlagTime
@@ -34,12 +35,15 @@ const (
 	// FlagShortFile prints final file name element and line number: d.go:23
 	FlagShortFile
 
-	// FlagFields prints fields
+	// FlagFields prints fields if there are
 	FlagFields
 
-	// FlagStackTrace prints stack trace
+	// FlagStackTrace prints stack trace if there is
 	FlagStackTrace
 
+	// FlagErfStackTrace prints stack traces of erf error if there are
+	FlagErfStackTrace
+
 	// FlagDefault holds initial flags for the Logger
-	FlagDefault = FlagDate | FlagTime | FlagSeverity | FlagPadding | FlagFields | FlagStackTrace
+	FlagDefault = FlagDate | FlagTime | FlagSeverity | FlagPadding | FlagFields | FlagStackTrace | FlagErfStackTrace
 )

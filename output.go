@@ -204,7 +204,7 @@ func (t *TextOutput) SetWriter(w io.Writer) *TextOutput {
 	return t
 }
 
-// SetFlags sets flags to override every single Log.Flags if the flags argument different than 0.
+// SetFlags sets flags to override every single Log.Flags if the argument flags different from 0.
 // It returns underlying TextOutput.
 // By default, 0.
 func (t *TextOutput) SetFlags(flags Flag) *TextOutput {
