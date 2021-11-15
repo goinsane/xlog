@@ -1,13 +1,13 @@
 package xlog
 
 import (
+	"errors"
 	"strings"
-
-	"github.com/goinsane/erf"
 )
 
 var (
-	ErrUnknownSeverity = erf.New("unknown severity")
+	ErrInvalidSeverity = errors.New("invalid severity")
+	ErrUnknownSeverity = errors.New("unknown severity")
 )
 
 // Severity describes severity level of Log.
@@ -39,19 +39,25 @@ func (s Severity) String() string {
 	return string(text)
 }
 
-// IsValid returns whether value is valid.
+// IsValid returns whether s is valid.
 func (s Severity) IsValid() bool {
 	return s.CheckValid() == nil
 }
 
-// CheckValid returns error for invalid value.
+// CheckValid returns ErrInvalidSeverity for invalid s.
 func (s Severity) CheckValid() error {
-	_, err := s.MarshalText()
-	return err
+	if !(SeverityNone <= s && s <= SeverityDebug) {
+		return ErrInvalidSeverity
+	}
+	return nil
 }
 
 // MarshalText is implementation of encoding.TextMarshaler.
+// If s is invalid, it returns nil and result of Severity.CheckValid.
 func (s Severity) MarshalText() (text []byte, err error) {
+	if e := s.CheckValid(); e != nil {
+		return nil, e
+	}
 	var str string
 	switch s {
 	case SeverityNone:
@@ -67,12 +73,13 @@ func (s Severity) MarshalText() (text []byte, err error) {
 	case SeverityDebug:
 		str = "DEBUG"
 	default:
-		return nil, erf.Wrap(ErrUnknownSeverity)
+		panic("invalid severity")
 	}
 	return []byte(str), nil
 }
 
 // UnmarshalText is implementation of encoding.UnmarshalText.
+// If text is unknown, it returns ErrUnknownSeverity.
 func (s *Severity) UnmarshalText(text []byte) error {
 	switch str := strings.ToUpper(string(text)); str {
 	case "NONE", "NON", "NA":
@@ -88,7 +95,7 @@ func (s *Severity) UnmarshalText(text []byte) error {
 	case "DEBUG", "DBG":
 		*s = SeverityDebug
 	default:
-		return erf.Wrap(ErrUnknownSeverity)
+		return ErrUnknownSeverity
 	}
 	return nil
 }
