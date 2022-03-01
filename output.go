@@ -11,7 +11,7 @@ import (
 )
 
 // Output is an interface for Logger output.
-// All of Output implementations must be safe for concurrency.
+// All the Output implementations must be safe for concurrency.
 type Output interface {
 	Log(log *Log)
 }
@@ -24,7 +24,7 @@ func (m multiOutput) Log(log *Log) {
 	}
 }
 
-// MultiOutput creates a output that duplicates its logs to all the provided outputs.
+// MultiOutput creates an output that duplicates its logs to all the provided outputs.
 func MultiOutput(outputs ...Output) Output {
 	m := make(multiOutput, len(outputs))
 	copy(m, outputs)
@@ -37,7 +37,7 @@ func (a *asyncOutput) Log(log *Log) {
 	go a.Output.Log(log)
 }
 
-// AsyncOutput creates a output that doesn't blocks its logs to the provided output.
+// AsyncOutput creates an output that doesn't block its logs to the provided output.
 func AsyncOutput(output Output) Output {
 	return &asyncOutput{output}
 }

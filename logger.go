@@ -312,7 +312,7 @@ func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) *Logger {
 	return l
 }
 
-// V duplicates the Logger if the Logger's verbose is greater or equal to given verbosity. Otherwise returns nil.
+// V duplicates the Logger if the Logger's verbose is greater or equal to given verbosity, otherwise returns nil.
 func (l *Logger) V(verbosity Verbose) *Logger {
 	if l == nil {
 		return nil
