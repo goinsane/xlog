@@ -166,7 +166,15 @@ func (l *Log) Format(f fmt.State, verb rune) {
 
 		if l.Flags&FlagErfStackTrace != 0 && erfError != nil {
 			extend()
-			buf.WriteString(fmt.Sprintf("%-1.1x", erfError))
+			format := "%"
+			if l.Flags&FlagErfMessage == 0 {
+				format += "-"
+			}
+			if l.Flags&FlagErfFields != 0 {
+				format += "+"
+			}
+			format += "1.1x"
+			buf.WriteString(fmt.Sprintf(format, erfError))
 			buf.WriteRune('\n')
 		}
 

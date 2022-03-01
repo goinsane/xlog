@@ -38,12 +38,18 @@ const (
 	// FlagFields prints fields if there are
 	FlagFields
 
-	// FlagStackTrace prints stack trace if there is
+	// FlagStackTrace prints the stack trace if there is
 	FlagStackTrace
 
-	// FlagErfStackTrace prints stack traces of erf error if there are
+	// FlagErfStackTrace prints the stack trace of the erf error if there is the erf error
 	FlagErfStackTrace
 
+	// FlagErfMessage prints the message of the erf error while printing the erf stack trace
+	FlagErfMessage
+
+	// FlagErfFields prints fields of the erf error while printing the erf stack trace
+	FlagErfFields
+
 	// FlagDefault holds initial flags for the Logger
-	FlagDefault = FlagDate | FlagTime | FlagSeverity | FlagPadding | FlagFields | FlagStackTrace | FlagErfStackTrace
+	FlagDefault = FlagDate | FlagTime | FlagSeverity | FlagPadding | FlagFields | FlagStackTrace | FlagErfStackTrace | FlagErfMessage | FlagErfFields
 )
