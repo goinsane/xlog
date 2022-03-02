@@ -147,11 +147,12 @@ func (l *Log) Format(f fmt.State, verb rune) {
 		if l.Flags&FlagFields != 0 && len(l.Fields) > 0 {
 			extend()
 			buf.WriteRune('\t')
+			buf.WriteString("+ ")
 			for idx, field := range l.Fields {
 				if idx > 0 {
 					buf.WriteRune(' ')
 				}
-				buf.WriteString(fmt.Sprintf("%s=%q", field.Key, fmt.Sprintf("%v", field.Value)))
+				buf.WriteString(fmt.Sprintf("%s%q=%q", field.mark, field.Key, fmt.Sprintf("%v", field.Value)))
 			}
 			buf.WriteString("\n\t")
 			buf.WriteRune('\n')

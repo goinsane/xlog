@@ -8,6 +8,8 @@ import (
 type Field struct {
 	Key   string
 	Value interface{}
+
+	mark string
 }
 
 // Fields is slice of fields.
