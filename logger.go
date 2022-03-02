@@ -405,43 +405,43 @@ func (l *Logger) WithFieldMap(fieldMap map[string]interface{}) *Logger {
 	return l.WithFields(fields...)
 }
 
+// ErfError creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the *erf.Erf.
 func (l *Logger) ErfError(text string) *erf.Erf {
-	result := &loggerErfResult{
-		l: l.Duplicate(),
-		s: SeverityError,
-		e: erf.New(text),
-	}
-	result.e.Top(1)
-	return result.Attach()
+	return l.erfError(SeverityError, text)
 }
 
+// ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the *erf.Erf.
 func (l *Logger) ErfErrorf(format string, args ...interface{}) *loggerErfResult {
-	result := &loggerErfResult{
-		l: l.Duplicate(),
-		s: SeverityError,
-		e: erf.Newf(format, args...),
-	}
-	result.e.Top(1)
-	return result
+	return l.erfErrorf(SeverityError, format, args...)
 }
 
+// ErfWarning creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the *erf.Erf.
 func (l *Logger) ErfWarning(text string) *erf.Erf {
+	return l.erfError(SeverityWarning, text)
+}
+
+// ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the *erf.Erf.
+func (l *Logger) ErfWarningf(format string, args ...interface{}) *loggerErfResult {
+	return l.erfErrorf(SeverityWarning, format, args...)
+}
+
+func (l *Logger) erfError(severity Severity, text string) *erf.Erf {
 	result := &loggerErfResult{
 		l: l.Duplicate(),
-		s: SeverityWarning,
+		s: severity,
 		e: erf.New(text),
 	}
-	result.e.Top(1)
+	result.e.Top(2)
 	return result.Attach()
 }
 
-func (l *Logger) ErfWarningf(format string, args ...interface{}) *loggerErfResult {
+func (l *Logger) erfErrorf(severity Severity, format string, args ...interface{}) *loggerErfResult {
 	result := &loggerErfResult{
 		l: l.Duplicate(),
-		s: SeverityWarning,
+		s: severity,
 		e: erf.Newf(format, args...),
 	}
-	result.e.Top(1)
+	result.e.Top(2)
 	return result
 }
 

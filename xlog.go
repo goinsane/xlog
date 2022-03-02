@@ -209,6 +209,26 @@ func SetOutputFlags(flags Flag) *TextOutput {
 	return defaultOutput.SetFlags(flags)
 }
 
+// ErfError creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs to the default Logger and returns the *erf.Erf.
+func ErfError(text string) *erf.Erf {
+	return defaultLogger.erfError(SeverityError, text)
+}
+
+// ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs to the default Logger and returns the *erf.Erf.
+func ErfErrorf(format string, args ...interface{}) *loggerErfResult {
+	return defaultLogger.erfErrorf(SeverityError, format, args...)
+}
+
+// ErfWarning creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs to the default Logger and returns the *erf.Erf.
+func ErfWarning(text string) *erf.Erf {
+	return defaultLogger.erfError(SeverityWarning, text)
+}
+
+// ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs to the default Logger and returns the *erf.Erf.
+func ErfWarningf(format string, args ...interface{}) *loggerErfResult {
+	return defaultLogger.erfErrorf(SeverityWarning, format, args...)
+}
+
 // Reset resets the default Logger and the default Output.
 func Reset() {
 	SetOutput(defaultOutput)

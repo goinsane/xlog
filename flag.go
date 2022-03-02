@@ -51,5 +51,5 @@ const (
 	FlagErfFields
 
 	// FlagDefault holds initial flags for the Logger
-	FlagDefault = FlagDate | FlagTime | FlagSeverity | FlagPadding | FlagFields | FlagStackTrace | FlagErfStackTrace | FlagErfMessage | FlagErfFields
+	FlagDefault = FlagDate | FlagTime | FlagSeverity | FlagPadding | FlagFields | FlagStackTrace | FlagErfStackTrace
 )
