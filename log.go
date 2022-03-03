@@ -152,7 +152,11 @@ func (l *Log) Format(f fmt.State, verb rune) {
 				if idx > 0 {
 					buf.WriteRune(' ')
 				}
-				buf.WriteString(fmt.Sprintf("%s%q=%q", field.mark, field.Key, fmt.Sprintf("%v", field.Value)))
+				mark := ""
+				if field.Mark != nil {
+					mark = fmt.Sprintf("%s", field.Mark)
+				}
+				buf.WriteString(fmt.Sprintf("%s%q=%q", mark, field.Key, fmt.Sprintf("%v", field.Value)))
 			}
 			buf.WriteString("\n\t")
 			buf.WriteRune('\n')

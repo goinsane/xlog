@@ -1,6 +1,7 @@
 package xlog
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -8,8 +9,7 @@ import (
 type Field struct {
 	Key   string
 	Value interface{}
-
-	mark string
+	Mark  interface{}
 }
 
 // Fields is slice of fields.
@@ -40,4 +40,13 @@ func (f Fields) Less(i, j int) bool {
 // Swap is implementation of sort.Interface.
 func (f Fields) Swap(i, j int) {
 	f[i], f[j] = f[j], f[i]
+}
+
+type FieldMarkErf struct {
+	No    int
+	Index int
+}
+
+func (m *FieldMarkErf) String() string {
+	return fmt.Sprintf("%d:%d", m.No, m.Index)
 }

@@ -87,13 +87,13 @@ func (l *Logger) out(severity Severity, message string, err error) {
 		if log.Time.IsZero() {
 			log.Time = time.Now()
 		}
-		if e, ok := err.(*erf.Erf); ok && l.erfStackTrace {
+		if e, ok := log.Error.(*erf.Erf); ok && l.erfStackTrace {
 			stackTrace := e.StackTrace()
 			log.StackCaller = stackTrace.Caller(0)
 			if l.stackTraceSeverity >= severity {
 				log.StackTrace = e.StackTrace()
-				e.Top(e.PCLen())
 			}
+			log.Error = e.Unwrap()
 		} else {
 			log.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
 			if l.stackTraceSeverity >= severity {
@@ -429,9 +429,8 @@ func (l *Logger) erfError(severity Severity, text string) *erf.Erf {
 	result := &loggerErfResult{
 		l: l.Duplicate(),
 		s: severity,
-		e: erf.New(text),
+		e: erf.New(text).CopyByTop(2),
 	}
-	result.e.Top(2)
 	return result.Attach()
 }
 
@@ -439,9 +438,8 @@ func (l *Logger) erfErrorf(severity Severity, format string, args ...interface{}
 	result := &loggerErfResult{
 		l: l.Duplicate(),
 		s: severity,
-		e: erf.Newf(format, args...),
+		e: erf.Newf(format, args...).CopyByTop(2),
 	}
-	result.e.Top(2)
 	return result
 }
 
@@ -465,7 +463,10 @@ func (r *loggerErfResult) Attach(tags ...string) *erf.Erf {
 					r.l.fields = append(r.l.fields, Field{
 						Key:   tag,
 						Value: e3.Arg(tagIdx),
-						mark:  fmt.Sprintf("%d:%d", idx, tagIdx),
+						Mark: &FieldMarkErf{
+							No:    idx,
+							Index: tagIdx,
+						},
 					})
 				}
 			}
