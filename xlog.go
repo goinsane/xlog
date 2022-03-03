@@ -209,9 +209,9 @@ func SetOutputFlags(flags Flag) *TextOutput {
 	return defaultOutput.SetFlags(flags)
 }
 
-// ErfError creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs to the default Logger and returns the *erf.Erf.
-func ErfError(text string) *erf.Erf {
-	return defaultLogger.erfError(SeverityError, text)
+// ErfError creates a new *erf.Erf by the given argument. It logs to the ERROR severity logs to the default Logger and returns the *erf.Erf.
+func ErfError(arg interface{}) *erf.Erf {
+	return defaultLogger.erfError(SeverityError, arg)
 }
 
 // ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs to the default Logger and the result to call Attach method of *erf.Erf.
@@ -219,24 +219,14 @@ func ErfErrorf(format string, args ...interface{}) *loggerErfResult {
 	return defaultLogger.erfErrorf(SeverityError, format, args...)
 }
 
-// ErfErrorWrap creates a new *erf.Erf by given error e. It logs to the ERROR severity logs to the default Logger and returns the *erf.Erf.
-func ErfErrorWrap(e error) *erf.Erf {
-	return defaultLogger.erfErrorWrap(SeverityError, e)
-}
-
-// ErfWarning creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs to the default Logger and returns the *erf.Erf.
-func ErfWarning(text string) *erf.Erf {
-	return defaultLogger.erfError(SeverityWarning, text)
+// ErfWarning creates a new *erf.Erf by the given argument. It logs to the WARNING severity logs to the default Logger and returns the *erf.Erf.
+func ErfWarning(arg interface{}) *erf.Erf {
+	return defaultLogger.erfError(SeverityWarning, arg)
 }
 
 // ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs to the default Logger and returns the result to call Attach method of *erf.Erf.
 func ErfWarningf(format string, args ...interface{}) *loggerErfResult {
 	return defaultLogger.erfErrorf(SeverityWarning, format, args...)
-}
-
-// ErfWarningWrap creates a new *erf.Erf by given error e. It logs to the WARNING severity logs to the default Logger and returns the *erf.Erf.
-func ErfWarningWrap(e error) *erf.Erf {
-	return defaultLogger.erfErrorWrap(SeverityWarning, e)
 }
 
 // Reset resets the default Logger and the default Output.
