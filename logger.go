@@ -410,9 +410,14 @@ func (l *Logger) ErfError(text string) *erf.Erf {
 	return l.erfError(SeverityError, text)
 }
 
-// ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the *erf.Erf.
+// ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the result to call Attach method of *erf.Erf.
 func (l *Logger) ErfErrorf(format string, args ...interface{}) *loggerErfResult {
 	return l.erfErrorf(SeverityError, format, args...)
+}
+
+// ErfErrorWrap creates a new *erf.Erf by given error e. It logs to the ERROR severity logs and returns the *erf.Erf.
+func (l *Logger) ErfErrorWrap(e error) *erf.Erf {
+	return l.erfErrorWrap(SeverityError, e)
 }
 
 // ErfWarning creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the *erf.Erf.
@@ -420,9 +425,14 @@ func (l *Logger) ErfWarning(text string) *erf.Erf {
 	return l.erfError(SeverityWarning, text)
 }
 
-// ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the *erf.Erf.
+// ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the result to call Attach method of *erf.Erf.
 func (l *Logger) ErfWarningf(format string, args ...interface{}) *loggerErfResult {
 	return l.erfErrorf(SeverityWarning, format, args...)
+}
+
+// ErfWarningWrap creates a new *erf.Erf by given error e. It logs to the WARNING severity logs and returns the *erf.Erf.
+func (l *Logger) ErfWarningWrap(e error) *erf.Erf {
+	return l.erfErrorWrap(SeverityWarning, e)
 }
 
 func (l *Logger) erfError(severity Severity, text string) *erf.Erf {
@@ -441,6 +451,15 @@ func (l *Logger) erfErrorf(severity Severity, format string, args ...interface{}
 		e: erf.Newf(format, args...).CopyByTop(2),
 	}
 	return result
+}
+
+func (l *Logger) erfErrorWrap(severity Severity, e error) *erf.Erf {
+	result := &loggerErfResult{
+		l: l.Duplicate(),
+		s: severity,
+		e: erf.Wrap(e).(*erf.Erf).CopyByTop(2),
+	}
+	return result.Attach()
 }
 
 type loggerErfResult struct {
