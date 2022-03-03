@@ -22,6 +22,7 @@ type Logger struct {
 	verbosity          Verbose
 	time               time.Time
 	fields             Fields
+	erfStackTrace      bool
 }
 
 // New creates a new Logger. If severity is invalid, it sets SeverityInfo.
@@ -41,6 +42,9 @@ func New(output Output, severity Severity, verbose Verbose) *Logger {
 
 // Duplicate duplicates the Logger.
 func (l *Logger) Duplicate() *Logger {
+	if l == nil {
+		return nil
+	}
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	l2 := &Logger{
@@ -83,9 +87,18 @@ func (l *Logger) out(severity Severity, message string, err error) {
 		if log.Time.IsZero() {
 			log.Time = time.Now()
 		}
-		log.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
-		if l.stackTraceSeverity >= severity {
-			log.StackTrace = erf.NewStackTrace(erf.PC(defaultPCSize, 5)...)
+		if e, ok := log.Error.(*erf.Erf); ok && l.erfStackTrace {
+			stackTrace := e.StackTrace()
+			log.StackCaller = stackTrace.Caller(0)
+			if l.stackTraceSeverity >= severity {
+				log.StackTrace = e.StackTrace()
+			}
+			log.Error = e.Unwrap()
+		} else {
+			log.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
+			if l.stackTraceSeverity >= severity {
+				log.StackTrace = erf.NewStackTrace(erf.PC(defaultPCSize, 5)...)
+			}
 		}
 		l.output.Log(log)
 	}
@@ -312,7 +325,7 @@ func (l *Logger) SetStackTraceSeverity(stackTraceSeverity Severity) *Logger {
 	return l
 }
 
-// V duplicates the Logger if the Logger's verbose is greater or equal to given verbosity. Otherwise returns nil.
+// V duplicates the Logger if the Logger's verbose is greater or equal to given verbosity, otherwise returns nil.
 func (l *Logger) V(verbosity Verbose) *Logger {
 	if l == nil {
 		return nil
@@ -390,4 +403,75 @@ func (l *Logger) WithFieldMap(fieldMap map[string]interface{}) *Logger {
 		fields = append(fields, Field{Key: k, Value: v})
 	}
 	return l.WithFields(fields...)
+}
+
+// ErfError creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the *erf.Erf.
+func (l *Logger) ErfError(text string) *erf.Erf {
+	return l.erfError(SeverityError, text)
+}
+
+// ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the *erf.Erf.
+func (l *Logger) ErfErrorf(format string, args ...interface{}) *loggerErfResult {
+	return l.erfErrorf(SeverityError, format, args...)
+}
+
+// ErfWarning creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the *erf.Erf.
+func (l *Logger) ErfWarning(text string) *erf.Erf {
+	return l.erfError(SeverityWarning, text)
+}
+
+// ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the *erf.Erf.
+func (l *Logger) ErfWarningf(format string, args ...interface{}) *loggerErfResult {
+	return l.erfErrorf(SeverityWarning, format, args...)
+}
+
+func (l *Logger) erfError(severity Severity, text string) *erf.Erf {
+	result := &loggerErfResult{
+		l: l.Duplicate(),
+		s: severity,
+		e: erf.New(text).CopyByTop(2),
+	}
+	return result.Attach()
+}
+
+func (l *Logger) erfErrorf(severity Severity, format string, args ...interface{}) *loggerErfResult {
+	result := &loggerErfResult{
+		l: l.Duplicate(),
+		s: severity,
+		e: erf.Newf(format, args...).CopyByTop(2),
+	}
+	return result
+}
+
+type loggerErfResult struct {
+	l *Logger
+	s Severity
+	e *erf.Erf
+}
+
+func (r *loggerErfResult) Attach(tags ...string) *erf.Erf {
+	e := r.e
+	if len(tags) > 0 {
+		e = e.Attach(tags...)
+	}
+	if r.l != nil {
+		r.l.erfStackTrace = true
+		for idx, e2 := range e.UnwrapAll() {
+			if e3, ok := e2.(*erf.Erf); ok {
+				for _, tag := range e3.Tags() {
+					tagIdx := e3.TagIndex(tag)
+					r.l.fields = append(r.l.fields, Field{
+						Key:   tag,
+						Value: e3.Arg(tagIdx),
+						Mark: &FieldMarkErf{
+							No:    idx,
+							Index: tagIdx,
+						},
+					})
+				}
+			}
+		}
+		r.l.log(r.s, e)
+	}
+	return e
 }
