@@ -214,9 +214,14 @@ func ErfError(text string) *erf.Erf {
 	return defaultLogger.erfError(SeverityError, text)
 }
 
-// ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs to the default Logger and returns the *erf.Erf.
+// ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs to the default Logger and the result to call Attach method of *erf.Erf.
 func ErfErrorf(format string, args ...interface{}) *loggerErfResult {
 	return defaultLogger.erfErrorf(SeverityError, format, args...)
+}
+
+// ErfErrorWrap creates a new *erf.Erf by given error e. It logs to the ERROR severity logs to the default Logger and returns the *erf.Erf.
+func ErfErrorWrap(e error) *erf.Erf {
+	return defaultLogger.erfErrorWrap(SeverityError, e)
 }
 
 // ErfWarning creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs to the default Logger and returns the *erf.Erf.
@@ -224,9 +229,14 @@ func ErfWarning(text string) *erf.Erf {
 	return defaultLogger.erfError(SeverityWarning, text)
 }
 
-// ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs to the default Logger and returns the *erf.Erf.
+// ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs to the default Logger and returns the result to call Attach method of *erf.Erf.
 func ErfWarningf(format string, args ...interface{}) *loggerErfResult {
 	return defaultLogger.erfErrorf(SeverityWarning, format, args...)
+}
+
+// ErfWarningWrap creates a new *erf.Erf by given error e. It logs to the WARNING severity logs to the default Logger and returns the *erf.Erf.
+func ErfWarningWrap(e error) *erf.Erf {
+	return defaultLogger.erfErrorWrap(SeverityWarning, e)
 }
 
 // Reset resets the default Logger and the default Output.
