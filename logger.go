@@ -463,7 +463,7 @@ func (r *loggerErfResult) Attach(tags ...string) *erf.Erf {
 					r.l.fields = append(r.l.fields, Field{
 						Key:   tag,
 						Value: e3.Arg(tagIdx),
-						Mark: &FieldMarkErf{
+						mark: &FieldMarkErf{
 							No:    idx,
 							Index: tagIdx,
 						},

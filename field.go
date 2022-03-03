@@ -9,7 +9,12 @@ import (
 type Field struct {
 	Key   string
 	Value interface{}
-	Mark  interface{}
+
+	mark interface{}
+}
+
+func (f *Field) GetMark() interface{} {
+	return f.mark
 }
 
 // Fields is slice of fields.
