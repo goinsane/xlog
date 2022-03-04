@@ -93,7 +93,13 @@ func (l *Logger) out(severity Severity, message string, err error) {
 			if l.stackTraceSeverity >= severity {
 				log.StackTrace = e.StackTrace()
 			}
-			log.Error = e.Unwrap()
+			/*e2 := e.Unwrap()
+			if _, ok := e2.(*erf.Erf); ok {
+				log.Error = e2
+			} else {
+				log.Error = e.CopyByTop(e.PCLen())
+			}*/
+			log.Error = e.CopyByTop(e.PCLen())
 		} else {
 			log.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
 			if l.stackTraceSeverity >= severity {
@@ -405,22 +411,22 @@ func (l *Logger) WithFieldMap(fieldMap map[string]interface{}) *Logger {
 	return l.WithFields(fields...)
 }
 
-// ErfError creates a new *erf.Erf by the given argument. It logs to the ERROR severity logs and returns the *erf.Erf.
+// ErfError creates a new *erf.Erf by the given argument. It logs to the ERROR severity logs and returns the new *erf.Erf.
 func (l *Logger) ErfError(arg interface{}) *erf.Erf {
 	return l.erfError(SeverityError, arg)
 }
 
-// ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the result to call Attach method of *erf.Erf.
+// ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the result to get the new *erf.Erf.
 func (l *Logger) ErfErrorf(format string, args ...interface{}) *loggerErfResult {
 	return l.erfErrorf(SeverityError, format, args...)
 }
 
-// ErfWarning creates a new *erf.Erf by the given argument. It logs to the WARNING severity logs and returns the *erf.Erf.
+// ErfWarning creates a new *erf.Erf by the given argument. It logs to the WARNING severity logs and returns the new *erf.Erf.
 func (l *Logger) ErfWarning(arg interface{}) *erf.Erf {
 	return l.erfError(SeverityWarning, arg)
 }
 
-// ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the result to call Attach method of *erf.Erf.
+// ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the result to get the new *erf.Erf.
 func (l *Logger) ErfWarningf(format string, args ...interface{}) *loggerErfResult {
 	return l.erfErrorf(SeverityWarning, format, args...)
 }
@@ -436,7 +442,7 @@ func (l *Logger) erfError(severity Severity, arg interface{}) *erf.Erf {
 	} else {
 		result.e = erf.New(fmt.Sprint(arg)).CopyByTop(2)
 	}
-	return result.Attach()
+	return result.Log()
 }
 
 func (l *Logger) erfErrorf(severity Severity, format string, args ...interface{}) *loggerErfResult {
@@ -454,29 +460,34 @@ type loggerErfResult struct {
 	e *erf.Erf
 }
 
+// Attach calls Attach method of *erf.Erf.
+// It returns result of Log method, and logs to the underlying Logger that using Log method.
 func (r *loggerErfResult) Attach(tags ...string) *erf.Erf {
-	e := r.e
-	if len(tags) > 0 {
-		e = e.Attach(tags...)
+	r.e = r.e.Attach(tags...)
+	return r.Log()
+}
+
+// Log logs to the underlying Logger, and returns the new *erf.Erf.
+func (r *loggerErfResult) Log() *erf.Erf {
+	if r.l == nil {
+		return r.e
 	}
-	if r.l != nil {
-		r.l.erfStackTrace = true
-		for idx, e2 := range e.UnwrapAll() {
-			if e3, ok := e2.(*erf.Erf); ok {
-				for _, tag := range e3.Tags() {
-					tagIdx := e3.TagIndex(tag)
-					r.l.fields = append(r.l.fields, Field{
-						Key:   tag,
-						Value: e3.Arg(tagIdx),
-						mark: &FieldMarkErf{
-							No:    idx,
-							Index: tagIdx,
-						},
-					})
-				}
+	r.l.erfStackTrace = true
+	for idx, e := range r.e.UnwrapAll() {
+		if e2, ok := e.(*erf.Erf); ok {
+			for _, tag := range e2.Tags() {
+				tagIdx := e2.TagIndex(tag)
+				r.l.fields = append(r.l.fields, Field{
+					Key:   tag,
+					Value: e2.Arg(tagIdx),
+					mark: &FieldMarkErf{
+						No:    idx,
+						Index: tagIdx,
+					},
+				})
 			}
 		}
-		r.l.log(r.s, e)
 	}
-	return e
+	r.l.log(r.s, r.e)
+	return r.e
 }
