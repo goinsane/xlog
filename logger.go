@@ -463,7 +463,7 @@ type loggerErfResult struct {
 // Attach calls Attach method of *erf.Erf.
 // It returns result of Log method, and logs to the underlying Logger that using Log method.
 func (r *loggerErfResult) Attach(tags ...string) *erf.Erf {
-	_ = r.e.Attach(tags...)
+	r.e = r.e.Attach(tags...)
 	return r.Log()
 }
 
