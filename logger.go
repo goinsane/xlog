@@ -93,7 +93,12 @@ func (l *Logger) out(severity Severity, message string, err error) {
 			if l.stackTraceSeverity >= severity {
 				log.StackTrace = e.StackTrace()
 			}
-			log.Error = e.Unwrap()
+			e2 := e.Unwrap()
+			if _, ok := e2.(*erf.Erf); ok {
+				log.Error = e2
+			} else {
+				log.Error = e.CopyByTop(e.PCLen())
+			}
 		} else {
 			log.StackCaller = erf.NewStackTrace(erf.PC(1, 5)...).Caller(0)
 			if l.stackTraceSeverity >= severity {
