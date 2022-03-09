@@ -209,9 +209,9 @@ func SetOutputFlags(flags Flag) *TextOutput {
 	return defaultOutput.SetFlags(flags)
 }
 
-// ErfError creates a new *erf.Erf by the given argument. It logs to the ERROR severity logs to the default Logger and returns the new *erf.Erf.
-func ErfError(arg interface{}) *erf.Erf {
-	return defaultLogger.erfError(SeverityError, arg)
+// ErfError creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs to the default Logger and returns the new *erf.Erf.
+func ErfError(args ...interface{}) *erf.Erf {
+	return defaultLogger.erfError(SeverityError, args...)
 }
 
 // ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs to the default Logger and the result to get the new *erf.Erf.
@@ -219,9 +219,9 @@ func ErfErrorf(format string, args ...interface{}) *loggerErfResult {
 	return defaultLogger.erfErrorf(SeverityError, format, args...)
 }
 
-// ErfWarning creates a new *erf.Erf by the given argument. It logs to the WARNING severity logs to the default Logger and returns the new *erf.Erf.
-func ErfWarning(arg interface{}) *erf.Erf {
-	return defaultLogger.erfError(SeverityWarning, arg)
+// ErfWarning creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs to the default Logger and returns the new *erf.Erf.
+func ErfWarning(args ...interface{}) *erf.Erf {
+	return defaultLogger.erfError(SeverityWarning, args...)
 }
 
 // ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs to the default Logger and returns the result to get the new *erf.Erf.

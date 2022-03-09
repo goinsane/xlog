@@ -411,9 +411,9 @@ func (l *Logger) WithFieldMap(fieldMap map[string]interface{}) *Logger {
 	return l.WithFields(fields...)
 }
 
-// ErfError creates a new *erf.Erf by the given argument. It logs to the ERROR severity logs and returns the new *erf.Erf.
-func (l *Logger) ErfError(arg interface{}) *erf.Erf {
-	return l.erfError(SeverityError, arg)
+// ErfError creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the new *erf.Erf.
+func (l *Logger) ErfError(args ...interface{}) *erf.Erf {
+	return l.erfError(SeverityError, args...)
 }
 
 // ErfErrorf creates a new *erf.Erf by given arguments. It logs to the ERROR severity logs and returns the result to get the new *erf.Erf.
@@ -421,9 +421,9 @@ func (l *Logger) ErfErrorf(format string, args ...interface{}) *loggerErfResult 
 	return l.erfErrorf(SeverityError, format, args...)
 }
 
-// ErfWarning creates a new *erf.Erf by the given argument. It logs to the WARNING severity logs and returns the new *erf.Erf.
-func (l *Logger) ErfWarning(arg interface{}) *erf.Erf {
-	return l.erfError(SeverityWarning, arg)
+// ErfWarning creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the new *erf.Erf.
+func (l *Logger) ErfWarning(args ...interface{}) *erf.Erf {
+	return l.erfError(SeverityWarning, args...)
 }
 
 // ErfWarningf creates a new *erf.Erf by given arguments. It logs to the WARNING severity logs and returns the result to get the new *erf.Erf.
@@ -431,33 +431,43 @@ func (l *Logger) ErfWarningf(format string, args ...interface{}) *loggerErfResul
 	return l.erfErrorf(SeverityWarning, format, args...)
 }
 
-func (l *Logger) erfError(severity Severity, arg interface{}) *erf.Erf {
+func (l *Logger) erfError(severity Severity, args ...interface{}) *erf.Erf {
 	result := &loggerErfResult{
-		l: l.Duplicate(),
-		s: severity,
-		e: nil,
+		l:    l.Duplicate(),
+		s:    severity,
+		e:    nil,
+		args: make([]interface{}, 0, len(args)),
 	}
-	if e, ok := arg.(error); ok {
-		result.e = erf.Wrap(e).(*erf.Erf).CopyByTop(2)
-	} else {
-		result.e = erf.New(fmt.Sprint(arg)).CopyByTop(2)
+	for _, arg := range args {
+		if e, ok := arg.(error); ok && result.e == nil {
+			result.e = erf.Wrap(e).(*erf.Erf).CopyByTop(2)
+			result.args = append(result.args, result.e)
+		} else {
+			result.args = append(result.args, arg)
+		}
+	}
+	if result.e == nil {
+		result.e = erf.New(fmt.Sprint(args...)).CopyByTop(2)
+		result.args = nil
 	}
 	return result.Log()
 }
 
 func (l *Logger) erfErrorf(severity Severity, format string, args ...interface{}) *loggerErfResult {
 	result := &loggerErfResult{
-		l: l.Duplicate(),
-		s: severity,
-		e: erf.Newf(format, args...).CopyByTop(2),
+		l:    l.Duplicate(),
+		s:    severity,
+		e:    erf.Newf(format, args...).CopyByTop(2),
+		args: nil,
 	}
 	return result
 }
 
 type loggerErfResult struct {
-	l *Logger
-	s Severity
-	e *erf.Erf
+	l    *Logger
+	s    Severity
+	e    *erf.Erf
+	args []interface{}
 }
 
 // Attach calls Attach method of *erf.Erf.
@@ -488,6 +498,10 @@ func (r *loggerErfResult) Log() *erf.Erf {
 			}
 		}
 	}
-	r.l.log(r.s, r.e)
+	args := r.args
+	if args == nil {
+		args = []interface{}{r.e}
+	}
+	r.l.log(r.s, args...)
 	return r.e
 }
