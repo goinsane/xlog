@@ -154,7 +154,7 @@ func (l *Log) Format(f fmt.State, verb rune) {
 				}
 				mark := ""
 				if field.mark != nil {
-					mark = fmt.Sprintf("%s", field.mark)
+					mark = fmt.Sprintf("%v", field.mark)
 				}
 				buf.WriteString(fmt.Sprintf("%s%q=%q", mark, field.Key, fmt.Sprintf("%v", field.Value)))
 			}
