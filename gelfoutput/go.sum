@@ -1,14 +1,4 @@
-github.com/goinsane/erf v1.0.2 h1:UwngrFurcUnUklpE0U4dnqFvSGDQsRfwXbjWRyUcTOY=
-github.com/goinsane/erf v1.0.2/go.mod h1:KIGOu4SVAUGC5gHe3Q/uCswZN40wwPFJ9MS924nA/AI=
-github.com/goinsane/erf v1.0.3 h1:1ufPoJI5KKxQTR1HM4JVxgfzhbO8jiM1XA8mU/pVovc=
-github.com/goinsane/erf v1.0.3/go.mod h1:KIGOu4SVAUGC5gHe3Q/uCswZN40wwPFJ9MS924nA/AI=
-github.com/goinsane/erf v1.0.4 h1:XgQCZmWNU3MCJo0vT2D0fa146smPBGShol8UrM0Vp/8=
-github.com/goinsane/erf v1.0.4/go.mod h1:KIGOu4SVAUGC5gHe3Q/uCswZN40wwPFJ9MS924nA/AI=
-github.com/goinsane/erf v1.1.0 h1:9JmWZUexQXHrNsLKERygGr3wQCAG04bo6mS4UgXDOKo=
-github.com/goinsane/erf v1.1.0/go.mod h1:KIGOu4SVAUGC5gHe3Q/uCswZN40wwPFJ9MS924nA/AI=
-github.com/goinsane/erf v1.1.1 h1:X7HZBYI96H0yGhrK4Sxr/y1L3ZIwOXfBhqN/XLaODgc=
-github.com/goinsane/erf v1.1.1/go.mod h1:KIGOu4SVAUGC5gHe3Q/uCswZN40wwPFJ9MS924nA/AI=
-github.com/goinsane/xlog v1.0.0 h1:YO27ov5I3WmD8AyV3EcowNf+ZGqcKex8PUJu2TxdmOI=
-github.com/goinsane/xlog v1.0.0/go.mod h1:LXGz2XS2nzNGvHbFAAPrPDELBXCeQyo2vb60ostxKyU=
+github.com/goinsane/erf v1.3.1 h1:Ubf1sRztbnHeYc5URgKUcpqjC/DyCV0lN7OoZnpjFxE=
+github.com/goinsane/erf v1.3.1/go.mod h1:KIGOu4SVAUGC5gHe3Q/uCswZN40wwPFJ9MS924nA/AI=
 gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0 h1:Xg23ydYYJLmb9AK3XdcEpplHZd1MpN3X2ZeeMoBClmY=
 gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0/go.mod h1:CeDeqW4tj9FrgZXF/dQCWZrBdcZWWBenhJtxLH4On2g=

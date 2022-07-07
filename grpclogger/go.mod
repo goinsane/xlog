@@ -5,6 +5,6 @@ go 1.13
 replace github.com/goinsane/xlog => ../
 
 require (
-	github.com/goinsane/xlog v0.0.0-00010101000000-000000000000
+	github.com/goinsane/xlog v1.2.4
 	google.golang.org/grpc v1.34.0
 )
