@@ -10,8 +10,6 @@ github.com/envoyproxy/go-control-plane v0.9.7/go.mod h1:cwu0lG7PUMfa9snN8LXBig5y
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/goinsane/erf v1.3.1 h1:Ubf1sRztbnHeYc5URgKUcpqjC/DyCV0lN7OoZnpjFxE=
 github.com/goinsane/erf v1.3.1/go.mod h1:KIGOu4SVAUGC5gHe3Q/uCswZN40wwPFJ9MS924nA/AI=
-github.com/goinsane/xlog v1.2.5 h1:P+P4WWuEFeG7WLqRX71hovUHxzBSVeX7hl2Pc5H4110=
-github.com/goinsane/xlog v1.2.5/go.mod h1:5uR3jbBJzV76b4dCTybFq41DUzvkiVVYQTsD4wtFzqw=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
 github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
